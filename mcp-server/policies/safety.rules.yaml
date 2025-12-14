@@ -1,0 +1,292 @@
+# Safety Rules for Medical Decision-Making
+# CRITICAL: These rules prevent AI from making harmful decisions
+
+version: "1.0"
+name: safety_rules
+terms:
+  - name: acceptance
+    description: "Usage of these safety rules confirms adherence to the enforced human-in-the-loop controls and escalation procedures."
+
+# Core Safety Principles
+principles:
+  - name: human_in_the_loop
+    description: "AI never makes final decisions on life-critical matters"
+    enforcement: mandatory
+    
+  - name: do_no_harm
+    description: "Always prioritize patient safety over efficiency"
+    enforcement: mandatory
+    
+  - name: uncertainty_acknowledgment
+    description: "Explicitly state confidence levels and limitations"
+    enforcement: mandatory
+    
+  - name: graceful_degradation
+    description: "Fall back to safe manual mode on any doubt"
+    enforcement: mandatory
+
+# Hard Constraints (NEVER violate these)
+hard_constraints:
+  medical_decisions:
+    - rule: "NEVER make treatment decisions"
+      applies_to: all_agents
+      violation: system_shutdown
+      
+    - rule: "NEVER override physician orders"
+      applies_to: all_agents
+      violation: system_shutdown
+      
+    - rule: "NEVER delay emergency transport for AI processing"
+      applies_to:
+        - cardiac_router
+        - trauma_coordinator
+        - stroke_pathway
+      violation: immediate_escalation
+      max_processing_time: 30s
+      
+    - rule: "NEVER recommend medication dosages"
+      applies_to: all_agents
+      violation: system_shutdown
+      
+    - rule: "NEVER diagnose medical conditions"
+      applies_to: all_agents
+      violation: system_shutdown
+  
+  routing_decisions:
+    - rule: "MUST defer to paramedic judgment if conflict"
+      applies_to:
+        - ambulance_router
+        - trauma_coordinator
+        - cardiac_router
+      violation: use_paramedic_choice
+      
+    - rule: "MUST route to nearest appropriate facility if uncertainty"
+      applies_to:
+        - ambulance_router
+        - trauma_coordinator
+      violation: use_nearest_facility
+      
+    - rule: "MUST consider patient preference if documented"
+      applies_to:
+        - bed_orchestrator
+        - ambulance_router
+      violation: escalate_to_human
+  
+  resource_allocation:
+    - rule: "NEVER deny resources to critical patients"
+      applies_to:
+        - bed_orchestrator
+        - equipment_monitor
+      violation: immediate_allocation
+      
+    - rule: "MUST allocate based on medical need, not demographics"
+      applies_to:
+        - bed_orchestrator
+        - ambulance_router
+      violation: audit_and_reverse
+      fairness_check: mandatory
+      
+    - rule: "NEVER recommend discharging unstable patients"
+      applies_to:
+        - bed_orchestrator
+      violation: flag_for_physician_review
+
+# Confidence Thresholds
+confidence_requirements:
+  critical_decisions:
+    min_confidence: 90%
+    actions_below_threshold:
+      - escalate_to_human
+      - use_conservative_fallback
+      - increase_monitoring
+    
+    applies_to:
+      - trauma_coordinator
+      - cardiac_router
+      - stroke_pathway
+      - disaster_response
+  
+  high_priority_decisions:
+    min_confidence: 80%
+    actions_below_threshold:
+      - request_human_review
+      - provide_multiple_options
+    
+    applies_to:
+      - bed_orchestrator
+      - ambulance_router
+      - blood_optimizer
+  
+  routine_decisions:
+    min_confidence: 70%
+    actions_below_threshold:
+      - flag_for_review
+      - log_low_confidence
+    
+    applies_to:
+      - staff_scheduler
+      - equipment_monitor
+      - demand_forecaster
+
+# Data Quality Gates
+data_quality:
+  required_fields:
+    # For trauma routing
+    trauma_assessment:
+      required:
+        - patient_vital_signs
+        - injury_description
+        - paramedic_assessment
+      optional:
+        - medical_history
+        - current_medications
+      
+      missing_required_action: use_highest_level_trauma_center
+    
+    # For cardiac routing
+    cardiac_assessment:
+      required:
+        - chest_pain_onset
+        - ecg_findings
+        - vital_signs
+      optional:
+        - cardiac_history
+        - risk_factors
+      
+      missing_required_action: route_to_cath_lab_capable_facility
+    
+    # For bed allocation
+    bed_request:
+      required:
+        - patient_acuity
+        - required_bed_type
+        - admission_diagnosis
+      optional:
+        - special_requirements
+        - patient_preferences
+      
+      missing_required_action: assign_higher_acuity_bed
+  
+  freshness_requirements:
+    bed_availability:
+      max_age: 60s
+      stale_action: refresh_or_fail
+      
+    ambulance_location:
+      max_age: 10s
+      stale_action: refresh_or_fail
+      
+    equipment_status:
+      max_age: 300s
+      stale_action: assume_unavailable
+
+# Escalation Procedures
+escalation:
+  triggers:
+    # Conflicting information
+    - condition: "conflicting_vital_signs"
+      action: escalate_immediately
+      notify:
+        - attending_physician
+        - charge_nurse
+      
+    # Unusual patterns
+    - condition: "recommendation_deviates_from_protocol"
+      action: require_human_approval
+      notify:
+        - medical_director
+      
+    # System uncertainty
+    - condition: "confidence < threshold"
+      action: provide_options_for_human_choice
+      
+    # Resource constraints
+    - condition: "no_suitable_facility_found"
+      action: escalate_to_regional_coordinator
+      notify:
+        - hospital_administrators
+        - emergency_management
+  
+  escalation_paths:
+    level_1:
+      roles:
+        - charge_nurse
+        - attending_physician
+      response_time: 2m
+      
+    level_2:
+      roles:
+        - department_head
+        - medical_director
+      response_time: 5m
+      
+    level_3:
+      roles:
+        - chief_medical_officer
+        - hospital_administrator
+      response_time: 10m
+      
+    emergency:
+      roles:
+        - all_senior_staff
+        - emergency_management
+      response_time: immediate
+      notification_method: page_all
+
+# Time Constraints
+timing:
+  max_decision_times:
+    critical:
+      target: 10s
+      maximum: 30s
+      exceeded_action: use_default_protocol
+      
+    high:
+      target: 30s
+      maximum: 60s
+      exceeded_action: escalate
+      
+    medium:
+      target: 60s
+      maximum: 120s
+      exceeded_action: log_delay
+      
+    low:
+      target: 300s
+      maximum: 600s
+      exceeded_action: log_delay
+
+# Audit Requirements
+audit:
+  mandatory_logging:
+    - all_critical_decisions
+    - confidence_scores
+    - data_used_in_decision
+    - alternatives_considered
+    - human_approvals
+    - overrides_and_reasons
+    - escalations
+    
+  retention:
+    critical_decisions: 7_years    # HIPAA requirement
+    routine_decisions: 3_years
+    audit_logs: 7_years
+    
+  tamper_protection:
+    enabled: true
+    method: blockchain_or_immutable_storage
+
+# Testing Requirements
+testing:
+  required_before_deployment:
+    - unit_tests: 90% coverage
+    - integration_tests: 80% coverage
+    - safety_scenario_tests: 100% pass
+    - clinical_validation: physician_review
+    - bias_testing: fairness_metrics_pass
+    
+  continuous_monitoring:
+    - accuracy_tracking
+    - bias_detection
+    - outcome_analysis
+    - near_miss_reporting

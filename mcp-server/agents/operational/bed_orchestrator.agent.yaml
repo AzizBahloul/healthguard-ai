@@ -1,0 +1,201 @@
+# Bed Orchestrator Agent
+# Intelligent hospital bed allocation and capacity management
+
+version: "1.0"
+agent_id: bed_orchestrator
+type: operational
+category: resource_management
+
+metadata:
+  name: "Bed Orchestration Agent"
+  description: "Manages hospital bed allocation, predicts capacity needs, and optimizes patient placement"
+  version: "1.0.0"
+  status: active
+
+capabilities:
+  primary:
+    - track_bed_availability_realtime
+    - predict_bed_shortages
+    - suggest_patient_transfers
+    - optimize_discharge_timing
+    - coordinate_with_ambulance_routing
+    
+  bed_types:
+    - icu
+    - step_down
+    - medical_surgical
+    - telemetry
+    - pediatric
+    - maternity
+    - psychiatric
+    - isolation
+    - burn_unit
+    - cardiac_icu
+    
+  optimization_goals:
+    - maximize_bed_utilization
+    - minimize_wait_times
+    - ensure_appropriate_level_of_care
+    - balance_load_across_facilities
+    - respect_patient_preferences
+
+input:
+  bed_request:
+    required:
+      - patient_id
+      - acuity_level
+      - required_bed_type
+      - admission_diagnosis
+      - estimated_length_of_stay
+      - insurance_status
+      - patient_location
+      
+    optional:
+      - patient_preferences
+      - family_location
+      - physician_privileges
+      - special_requirements
+      - isolation_needs
+      
+  capacity_query:
+    parameters:
+      - hospital_id
+      - bed_type
+      - time_horizon  # e.g., next 4 hours
+      - region
+
+decision_logic:
+  allocation_algorithm:
+    step_1_check_immediate_availability:
+      query: current_bed_census
+      filter_by:
+        - bed_type_match
+        - acuity_appropriate
+        - isolation_capability
+        
+    step_2_predict_near_term:
+      forecast_horizon: 2-6_hours
+      consider:
+        - expected_discharges
+        - scheduled_admissions
+        - ed_boarding_patients
+        - or_schedule
+        - historical_patterns
+        
+    step_3_optimize_assignment:
+      algorithm: constraint_satisfaction
+      objectives:
+        - primary: patient_safety
+        - secondary: minimize_transfers
+        - tertiary: maximize_utilization
+        
+      constraints:
+        hard:
+          - acuity_match_or_upgrade
+          - infection_control_requirements
+          - staffing_ratios
+          
+        soft:
+          - patient_preference
+          - physician_convenience
+          - family_proximity
+          
+    step_4_surge_activation:
+      trigger: capacity < 15%
+      actions:
+        - open_overflow_areas
+        - activate_discharge_planning
+        - notify_regional_coordinator
+        - suggest_elective_postponements
+
+  transfer_logic:
+    when_to_transfer:
+      - patient_stable_for_transport
+      - receiving_hospital_confirmed
+      - appropriate_level_of_care_available
+      - patient_consented
+      
+    when_not_to_transfer:
+      - patient_unstable
+      - no_accepting_facility
+      - would_delay_critical_intervention
+      
+  fairness_constraints:
+    ensure:
+      - no_discrimination_by_demographics
+      - equal_access_by_insurance_status
+      - prioritize_by_medical_acuity_only
+      
+    audit:
+      - track_allocation_by_demographics
+      - flag_potential_bias
+      - regular_fairness_reviews
+
+output:
+  allocation_recommendation:
+    hospital_id: string
+    unit_name: string
+    bed_number: string
+    confidence_score: float
+    estimated_availability_time: timestamp
+    
+  alternatives:
+    - second_choice
+    - third_choice
+    
+  reasoning:
+    capacity_analysis: object
+    acuity_matching: string
+    time_estimate: object
+    
+  alerts:
+    - capacity_warning_if_low
+    - surge_activation_recommendation
+    - transfer_suggestions
+
+tools:
+  allowed:
+    - hospital_state.get_bed_census
+    - hospital_state.get_discharge_schedule
+    - hospital_state.get_or_schedule
+    - hospital_state.get_ed_census
+    - alert_dispatcher.notify_bed_manager
+    - data_validator.check_bed_availability
+    
+  prohibited:
+    - patient_record.modify
+    - discharge.order
+    - admission.cancel
+
+memory:
+  read:
+    - graph_memory.resource_network
+    - short_term.current_bed_status
+    - mid_term.daily_patterns
+    - long_term.seasonal_trends
+    
+  write:
+    - decision_logs.bed_allocations
+    - performance_logs.utilization_metrics
+
+monitoring:
+  metrics:
+    - allocation_accuracy
+    - time_to_bed_assignment
+    - transfer_rate
+    - utilization_rate
+    - patient_satisfaction
+    
+  targets:
+    decision_time: <30s
+    accuracy: ">90%"
+    false_availability: <5%
+
+fallback:
+  on_uncertainty:
+    action: provide_multiple_options
+    require: human_selection
+    
+  on_no_beds_available:
+    action: suggest_regional_alternatives
+    notify: hospital_administrator

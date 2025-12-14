@@ -1,0 +1,316 @@
+# Rate Limiter Configuration
+# Prevent abuse and ensure fair resource allocation
+
+version: "1.0"
+name: rate_limiters
+
+# Global Rate Limiting
+global:
+  enabled: true
+  
+  # Overall system limits
+  system:
+    requests_per_second: 1000
+    requests_per_minute: 50000
+    burst_size: 200
+    
+  # Algorithm
+  algorithm: token_bucket
+  
+  # Distributed rate limiting
+  distributed:
+    enabled: true
+    backend: redis
+    key_prefix: "ratelimit:"
+
+# Per-Agent Rate Limits
+per_agent:
+  enabled: true
+  
+  defaults:
+    requests_per_minute: 100
+    burst_size: 20
+    
+  agents:
+    # Critical agents - higher limits
+    trauma_coordinator:
+      requests_per_minute: 500
+      burst_size: 100
+      
+    cardiac_router:
+      requests_per_minute: 500
+      burst_size: 100
+      
+    stroke_pathway:
+      requests_per_minute: 300
+      burst_size: 60
+      
+    # Operational agents
+    bed_orchestrator:
+      requests_per_minute: 300
+      burst_size: 60
+      
+    ambulance_router:
+      requests_per_minute: 400
+      burst_size: 80
+      
+    staff_scheduler:
+      requests_per_minute: 50
+      burst_size: 10
+      
+    blood_optimizer:
+      requests_per_minute: 100
+      burst_size: 20
+      
+    equipment_monitor:
+      requests_per_minute: 200
+      burst_size: 40
+      
+    # Predictive agents - lower limits
+    demand_forecaster:
+      requests_per_minute: 30
+      burst_size: 5
+      
+    surge_detector:
+      requests_per_minute: 60
+      burst_size: 10
+      
+    capacity_planner:
+      requests_per_minute: 20
+      burst_size: 5
+      
+    # Coordination agents
+    regional_coordinator:
+      requests_per_minute: 150
+      burst_size: 30
+      
+    inter_hospital:
+      requests_per_minute: 100
+      burst_size: 20
+      
+    disaster_response:
+      requests_per_minute: 200
+      burst_size: 50
+
+# Per-Hospital Rate Limits
+per_hospital:
+  enabled: true
+  
+  defaults:
+    requests_per_minute: 200
+    burst_size: 50
+    
+  # Tiered limits based on hospital size
+  tiers:
+    large:              # >500 beds
+      requests_per_minute: 500
+      burst_size: 100
+      hospitals:
+        - "HOSP-001"    # Metro General
+        - "HOSP-002"    # City Medical Center
+        
+    medium:             # 200-500 beds
+      requests_per_minute: 300
+      burst_size: 60
+      hospitals:
+        - "HOSP-003"
+        - "HOSP-004"
+        
+    small:              # <200 beds
+      requests_per_minute: 150
+      burst_size: 30
+      hospitals:
+        - "HOSP-005"
+        - "HOSP-006"
+
+# Per-User Rate Limits
+per_user:
+  enabled: true
+  
+  # Role-based limits
+  roles:
+    admin:
+      requests_per_minute: 1000
+      burst_size: 200
+      
+    physician:
+      requests_per_minute: 300
+      burst_size: 60
+      
+    nurse:
+      requests_per_minute: 200
+      burst_size: 40
+      
+    paramedic:
+      requests_per_minute: 150
+      burst_size: 30
+      
+    dispatcher:
+      requests_per_minute: 500
+      burst_size: 100
+      
+    analyst:
+      requests_per_minute: 100
+      burst_size: 20
+      
+    readonly:
+      requests_per_minute: 50
+      burst_size: 10
+
+# Emergency Override
+emergency_override:
+  enabled: true
+  
+  # Bypass rate limits for critical requests
+  conditions:
+    - priority: critical
+    - event_type: mass_casualty
+    - event_type: code_blue
+    - event_type: disaster_activation
+    
+  # But still track for audit
+  audit: true
+  
+  # Max emergency requests per time window
+  safety_limits:
+    max_per_minute: 1000
+    max_per_hour: 10000
+
+# Adaptive Throttling
+adaptive:
+  enabled: true
+  
+  # Reduce limits during high system load
+  triggers:
+    - condition: "cpu_usage > 80%"
+      action: reduce_limits
+      reduction_factor: 0.5
+      
+    - condition: "queue_depth > 1000"
+      action: reduce_limits
+      reduction_factor: 0.7
+      
+    - condition: "error_rate > 10%"
+      action: reduce_limits
+      reduction_factor: 0.6
+      
+    - condition: "db_connections > 90%"
+      action: reduce_limits
+      reduction_factor: 0.5
+      
+  # Recovery
+  recovery:
+    check_interval: 30s
+    recovery_factor: 1.1      # Increase limits by 10% if stable
+
+# IP-based Rate Limiting
+per_ip:
+  enabled: true
+  
+  defaults:
+    requests_per_minute: 100
+    burst_size: 20
+    
+  # Whitelist trusted IPs
+  whitelist:
+    - "10.0.0.0/8"           # Internal network
+    - "172.16.0.0/12"        # Hospital VPN
+    
+  # Blacklist abusive IPs
+  blacklist:
+    enabled: true
+    auto_block:
+      enabled: true
+      threshold: 1000         # 1000 req/min triggers block
+      duration: 1h            # Block for 1 hour
+      
+# API Endpoint Limits
+per_endpoint:
+  enabled: true
+  
+  endpoints:
+    # Authentication endpoints
+    "POST /auth/login":
+      requests_per_minute: 10
+      burst_size: 3
+      per: ip
+      
+    "POST /auth/refresh":
+      requests_per_minute: 30
+      burst_size: 5
+      per: user
+      
+    # Critical endpoints
+    "POST /emergency/trauma":
+      requests_per_minute: 500
+      burst_size: 100
+      bypass_for_priority: critical
+      
+    "POST /emergency/cardiac":
+      requests_per_minute: 500
+      burst_size: 100
+      bypass_for_priority: critical
+      
+    # Resource endpoints
+    "GET /hospitals/beds":
+      requests_per_minute: 300
+      burst_size: 60
+      cache_ttl: 5s
+      
+    "POST /ambulances/route":
+      requests_per_minute: 400
+      burst_size: 80
+      
+    # Analytics endpoints
+    "GET /analytics/*":
+      requests_per_minute: 50
+      burst_size: 10
+      cache_ttl: 60s
+
+# Quota Management
+quotas:
+  enabled: true
+  
+  # Daily quotas for non-emergency operations
+  daily:
+    forecasting: 1000
+    analytics: 5000
+    reports: 100
+    
+  # Monthly quotas
+  monthly:
+    ml_predictions: 100000
+    data_exports: 50
+
+# Response Headers
+headers:
+  enabled: true
+  
+  # Include rate limit info in responses
+  include:
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+    - X-RateLimit-Reset
+    - X-RateLimit-Retry-After
+
+# Monitoring
+monitoring:
+  metrics:
+    - requests_per_second
+    - throttled_requests
+    - burst_usage
+    - quota_usage
+    - emergency_overrides
+    
+  alerts:
+    - name: high_throttle_rate
+      condition: "throttled_requests > 10%"
+      severity: warning
+      
+    - name: quota_exceeded
+      condition: "quota_usage > 90%"
+      severity: info
+      
+    - name: potential_abuse
+      condition: "burst_usage > 80%"
+      severity: warning

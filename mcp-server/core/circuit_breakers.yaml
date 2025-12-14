@@ -1,0 +1,305 @@
+# Circuit Breaker Configuration
+# Automatic safety shutoffs to prevent cascading failures
+
+version: "1.0"
+name: circuit_breakers
+
+# Global Circuit Breaker Settings
+global:
+  enabled: true
+  
+  # Default settings for all agents
+  defaults:
+    # Error threshold
+    failure_threshold: 5          # % of requests that can fail
+    failure_window: 5m            # Time window to measure failures
+    
+    # Circuit states
+    open_duration: 30s            # How long circuit stays open
+    half_open_max_requests: 3     # Test requests in half-open state
+    
+    # Timeout settings
+    request_timeout: 10s
+    slow_call_threshold: 5s       # Calls slower than this count as failures
+    
+  # What to do when circuit opens
+  fallback_strategy: return_cached_or_manual
+
+# Per-Agent Circuit Breakers
+agents:
+  # Critical Agents - Stricter thresholds
+  trauma_coordinator:
+    enabled: true
+    failure_threshold: 2          # Very low tolerance for errors
+    failure_window: 3m
+    open_duration: 10s
+    request_timeout: 5s
+    fallback: manual_triage_only
+    alert_on_open: true
+    alert_channels:
+      - pager
+      - sms
+      - email
+    
+  cardiac_router:
+    enabled: true
+    failure_threshold: 2
+    failure_window: 3m
+    open_duration: 10s
+    request_timeout: 5s
+    fallback: manual_routing_only
+    alert_on_open: true
+    alert_channels:
+      - pager
+      - sms
+    
+  stroke_pathway:
+    enabled: true
+    failure_threshold: 2
+    failure_window: 3m
+    open_duration: 10s
+    request_timeout: 5s
+    fallback: manual_routing_only
+    alert_on_open: true
+    alert_channels:
+      - pager
+      - sms
+  
+  # Operational Agents - Moderate thresholds
+  bed_orchestrator:
+    enabled: true
+    failure_threshold: 10
+    failure_window: 5m
+    open_duration: 30s
+    request_timeout: 8s
+    fallback: return_cached_availability
+    alert_on_open: true
+    alert_channels:
+      - email
+      - slack
+    
+  ambulance_router:
+    enabled: true
+    failure_threshold: 8
+    failure_window: 5m
+    open_duration: 20s
+    request_timeout: 7s
+    fallback: use_default_routing_rules
+    alert_on_open: true
+    alert_channels:
+      - email
+      - slack
+    
+  staff_scheduler:
+    enabled: true
+    failure_threshold: 15
+    failure_window: 10m
+    open_duration: 60s
+    request_timeout: 15s
+    fallback: return_current_schedule
+    alert_on_open: false
+    
+  blood_optimizer:
+    enabled: true
+    failure_threshold: 12
+    failure_window: 5m
+    open_duration: 30s
+    request_timeout: 10s
+    fallback: manual_blood_allocation
+    alert_on_open: true
+    alert_channels:
+      - email
+    
+  equipment_monitor:
+    enabled: true
+    failure_threshold: 20
+    failure_window: 10m
+    open_duration: 60s
+    request_timeout: 20s
+    fallback: return_last_known_status
+    alert_on_open: false
+  
+  # Predictive Agents - Lenient thresholds
+  demand_forecaster:
+    enabled: true
+    failure_threshold: 25
+    failure_window: 15m
+    open_duration: 120s
+    request_timeout: 30s
+    fallback: use_historical_average
+    alert_on_open: false
+    
+  surge_detector:
+    enabled: true
+    failure_threshold: 20
+    failure_window: 10m
+    open_duration: 60s
+    request_timeout: 25s
+    fallback: assume_normal_conditions
+    alert_on_open: true
+    alert_channels:
+      - email
+    
+  capacity_planner:
+    enabled: true
+    failure_threshold: 30
+    failure_window: 20m
+    open_duration: 180s
+    request_timeout: 45s
+    fallback: use_static_capacity_model
+    alert_on_open: false
+  
+  # Coordination Agents
+  regional_coordinator:
+    enabled: true
+    failure_threshold: 10
+    failure_window: 5m
+    open_duration: 30s
+    request_timeout: 12s
+    fallback: local_decision_only
+    alert_on_open: true
+    alert_channels:
+      - email
+      - slack
+    
+  inter_hospital:
+    enabled: true
+    failure_threshold: 15
+    failure_window: 8m
+    open_duration: 45s
+    request_timeout: 15s
+    fallback: no_transfers
+    alert_on_open: true
+    alert_channels:
+      - email
+    
+  disaster_response:
+    enabled: true
+    failure_threshold: 5
+    failure_window: 3m
+    open_duration: 15s
+    request_timeout: 8s
+    fallback: manual_disaster_protocols
+    alert_on_open: true
+    alert_channels:
+      - pager
+      - sms
+      - email
+
+# Dependency Circuit Breakers
+dependencies:
+  # External services that agents depend on
+  
+  postgres:
+    enabled: true
+    failure_threshold: 5
+    failure_window: 2m
+    open_duration: 20s
+    request_timeout: 3s
+    fallback: use_cache_or_fail
+    
+  redis:
+    enabled: true
+    failure_threshold: 10
+    failure_window: 2m
+    open_duration: 10s
+    request_timeout: 1s
+    fallback: skip_cache
+    
+  kafka:
+    enabled: true
+    failure_threshold: 8
+    failure_window: 3m
+    open_duration: 30s
+    request_timeout: 5s
+    fallback: local_event_queue
+    
+  vector_db:
+    enabled: true
+    failure_threshold: 15
+    failure_window: 5m
+    open_duration: 60s
+    request_timeout: 10s
+    fallback: skip_similarity_search
+    
+  graph_db:
+    enabled: true
+    failure_threshold: 15
+    failure_window: 5m
+    open_duration: 60s
+    request_timeout: 10s
+    fallback: use_relational_query
+
+# Cascading Failure Prevention
+cascade_prevention:
+  enabled: true
+  
+  # If this many agents have open circuits, enter degraded mode
+  degraded_threshold: 3
+  
+  # If this many critical agents fail, enter emergency mode
+  emergency_threshold: 1
+  
+  # Degradation levels
+  modes:
+    normal:
+      description: "All systems operational"
+      all_agents_enabled: true
+      
+    degraded:
+      description: "Some non-critical systems disabled"
+      enabled_agents:
+        - trauma_coordinator
+        - cardiac_router
+        - stroke_pathway
+        - bed_orchestrator
+        - ambulance_router
+        - disaster_response
+      
+    emergency:
+      description: "Only life-critical agents active"
+      enabled_agents:
+        - trauma_coordinator
+        - cardiac_router
+        - stroke_pathway
+      
+    manual:
+      description: "AI advisory only, no automation"
+      enabled_agents: []
+      human_override: required
+
+# Recovery Strategy
+recovery:
+  # Gradual recovery after circuit closes
+  enabled: true
+  
+  # Slowly increase traffic to recovered agent
+  ramp_up:
+    enabled: true
+    initial_traffic: 10%      # Start with 10% of normal traffic
+    increment: 10%            # Increase by 10% every interval
+    interval: 30s             # Check every 30 seconds
+    
+  # Auto-recovery conditions
+  auto_recovery:
+    enabled: true
+    success_threshold: 95%    # 95% success rate to auto-recover
+    min_requests: 10          # Need at least 10 successful requests
+    check_window: 1m
+
+# Monitoring & Alerting
+monitoring:
+  metrics:
+    - circuit_state             # open/half-open/closed
+    - failure_rate
+    - open_count
+    - recovery_time
+    - fallback_usage
+  
+  dashboards:
+    - name: circuit_breaker_overview
+      panels:
+        - agent_circuit_states
+        - failure_rates_by_agent
+        - open_circuit_timeline
+        - fallback_effectiveness

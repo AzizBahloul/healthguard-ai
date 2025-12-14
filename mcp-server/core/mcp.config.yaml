@@ -1,0 +1,157 @@
+# MCP Server Global Configuration
+version: "1.0"
+environment: development
+
+server:
+  name: healthguard-mcp
+  version: 1.0.0
+  port: 3000
+  host: 0.0.0.0
+  
+  # Security
+  auth:
+    enabled: true
+    jwt_secret: ${JWT_SECRET}
+    token_expiry: 15m
+    refresh_token_expiry: 7d
+    
+  # CORS
+  cors:
+    enabled: true
+    origins:
+      - http://localhost:5173
+      - http://localhost:3001
+    credentials: true
+
+# Orchestrator Configuration
+orchestrator:
+  max_concurrent_agents: 10
+  request_timeout: 30s
+  agent_timeout: 10s
+  
+  # Priority Queue
+  priority_levels:
+    critical: 0      # Life-threatening (trauma, cardiac arrest)
+    high: 1          # Urgent (ambulance routing)
+    medium: 2        # Important (bed allocation)
+    low: 3           # Routine (analytics)
+  
+  # Deadlock Detection
+  deadlock:
+    enabled: true
+    check_interval: 5s
+    max_wait_time: 30s
+
+# Circuit Breaker Settings
+circuit_breakers:
+  enabled: true
+  
+  defaults:
+    error_threshold: 5          # % errors before opening
+    check_window: 5m            # Time window for error rate
+    open_duration: 30s          # How long circuit stays open
+    half_open_requests: 3       # Test requests in half-open state
+  
+  per_agent:
+    trauma_coordinator:
+      error_threshold: 2        # Stricter for critical agents
+      open_duration: 10s
+    
+    bed_orchestrator:
+      error_threshold: 10
+      open_duration: 60s
+
+# Rate Limiting
+rate_limiters:
+  enabled: true
+  
+  global:
+    requests_per_minute: 1000
+    burst_size: 100
+  
+  per_agent:
+    max_requests_per_minute: 100
+    burst_size: 20
+  
+  per_hospital:
+    max_requests_per_minute: 200
+    burst_size: 50
+  
+  # Emergency Override
+  emergency_bypass:
+    enabled: true
+    priority_threshold: critical
+
+# Data Sources
+data_sources:
+  postgres:
+    host: ${POSTGRES_HOST:-localhost}
+    port: ${POSTGRES_PORT:-5432}
+    database: healthguard
+    user: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    pool_size: 20
+    
+  redis:
+    host: ${REDIS_HOST:-localhost}
+    port: ${REDIS_PORT:-6379}
+    password: ${REDIS_PASSWORD}
+    db: 0
+    
+  kafka:
+    brokers:
+      - ${KAFKA_BROKER:-localhost:9092}
+    client_id: mcp-server
+    group_id: mcp-consumer-group
+    
+  vector_db:
+    provider: qdrant
+    host: ${QDRANT_HOST:-localhost}
+    port: ${QDRANT_PORT:-6333}
+    
+  graph_db:
+    provider: neo4j
+    uri: ${NEO4J_URI:-bolt://localhost:7687}
+    user: ${NEO4J_USER}
+    password: ${NEO4J_PASSWORD}
+
+# Logging
+logging:
+  level: ${LOG_LEVEL:-info}
+  format: json
+  
+  outputs:
+    - type: console
+    - type: file
+      path: ./logs/mcp-server.log
+      rotation: daily
+      max_size: 100MB
+      max_files: 30
+    
+  audit:
+    enabled: true
+    path: ./logs/audit.log
+    
+# Monitoring
+monitoring:
+  prometheus:
+    enabled: true
+    port: 9090
+    path: /metrics
+    
+  health_check:
+    enabled: true
+    path: /health
+    interval: 30s
+    
+  tracing:
+    enabled: true
+    provider: jaeger
+    endpoint: ${JAEGER_ENDPOINT}
+
+# Feature Flags
+features:
+  federated_learning: false     # Phase 3
+  social_media_monitoring: false # Phase 3
+  iot_sensors: false             # Phase 3
+  multi_region: false            # Phase 4

@@ -1,0 +1,229 @@
+# Orchestrator Configuration
+# Master coordination logic for all AI agents
+
+version: "1.0"
+name: healthguard_orchestrator
+
+# Request Routing Strategy
+routing:
+  strategy: priority_based
+  
+  # Route requests to appropriate agents based on type
+  routes:
+    - pattern: "emergency.trauma.*"
+      agent: trauma_coordinator
+      priority: critical
+      require_confirmation: true
+      
+    - pattern: "emergency.cardiac.*"
+      agent: cardiac_router
+      priority: critical
+      require_confirmation: true
+      
+    - pattern: "emergency.stroke.*"
+      agent: stroke_pathway
+      priority: critical
+      require_confirmation: true
+      
+    - pattern: "resource.bed.*"
+      agent: bed_orchestrator
+      priority: high
+      require_confirmation: false
+      
+    - pattern: "resource.ambulance.*"
+      agent: ambulance_router
+      priority: high
+      require_confirmation: false
+      
+    - pattern: "resource.staff.*"
+      agent: staff_scheduler
+      priority: medium
+      require_confirmation: false
+      
+    - pattern: "resource.blood.*"
+      agent: blood_optimizer
+      priority: high
+      require_confirmation: false
+      
+    - pattern: "resource.equipment.*"
+      agent: equipment_monitor
+      priority: medium
+      require_confirmation: false
+      
+    - pattern: "forecast.demand.*"
+      agent: demand_forecaster
+      priority: low
+      require_confirmation: false
+      
+    - pattern: "forecast.surge.*"
+      agent: surge_detector
+      priority: medium
+      require_confirmation: false
+      
+    - pattern: "forecast.capacity.*"
+      agent: capacity_planner
+      priority: low
+      require_confirmation: false
+      
+    - pattern: "coordination.regional.*"
+      agent: regional_coordinator
+      priority: medium
+      require_confirmation: false
+      
+    - pattern: "coordination.hospital.*"
+      agent: inter_hospital
+      priority: medium
+      require_confirmation: false
+      
+    - pattern: "coordination.disaster.*"
+      agent: disaster_response
+      priority: critical
+      require_confirmation: true
+
+# Multi-Agent Coordination
+coordination:
+  # Enable agents to collaborate on complex requests
+  enabled: true
+  
+  # Max agents that can work together
+  max_agents_per_request: 3
+  
+  # Collaboration patterns
+  patterns:
+    # Ambulance routing needs bed availability
+    - name: ambulance_with_bed_check
+      trigger: "resource.ambulance.route"
+      agents:
+        - ambulance_router
+        - bed_orchestrator
+      sequence: parallel
+      
+    # Regional coordination involves multiple agents
+    - name: regional_balancing
+      trigger: "coordination.regional.balance"
+      agents:
+        - regional_coordinator
+        - bed_orchestrator
+        - ambulance_router
+      sequence: sequential
+      
+    # Disaster response coordination
+    - name: disaster_activation
+      trigger: "coordination.disaster.activate"
+      agents:
+        - disaster_response
+        - regional_coordinator
+        - surge_detector
+      sequence: sequential
+
+# Conflict Resolution
+conflict_resolution:
+  # When multiple agents want same resource
+  strategy: priority_weighted
+  
+  rules:
+    # Critical patients get priority
+    - condition: "request.priority == critical"
+      action: preempt
+      
+    # Time-based fairness
+    - condition: "wait_time > 30m"
+      action: escalate
+      
+    # Hospital capacity constraints
+    - condition: "hospital.capacity < 10%"
+      action: redistribute
+
+# State Synchronization
+state_sync:
+  # Keep agent states consistent
+  enabled: true
+  
+  # Sync interval
+  interval: 1s
+  
+  # What to sync
+  sync_items:
+    - bed_availability
+    - ambulance_locations
+    - staff_schedules
+    - equipment_status
+    - patient_census
+  
+  # Conflict resolution for state updates
+  conflict_strategy: last_write_wins_with_vector_clock
+
+# Deadlock Detection
+deadlock_detection:
+  enabled: true
+  
+  # Check for circular dependencies
+  check_interval: 5s
+  
+  # Max time to wait for resource
+  max_wait_time: 30s
+  
+  # Recovery strategy
+  recovery:
+    strategy: timeout_and_retry
+    max_retries: 3
+    backoff: exponential
+
+# Load Balancing
+load_balancing:
+  # Distribute work across agent instances
+  enabled: true
+  
+  strategy: least_connections
+  
+  # Health check agents before routing
+  health_check:
+    enabled: true
+    interval: 10s
+    timeout: 3s
+    unhealthy_threshold: 3
+    healthy_threshold: 2
+
+# Performance Optimization
+optimization:
+  # Cache frequent queries
+  caching:
+    enabled: true
+    ttl: 60s
+    max_size: 1000
+  
+  # Batch similar requests
+  batching:
+    enabled: true
+    max_batch_size: 10
+    max_wait_time: 100ms
+  
+  # Prefetch predictable data
+  prefetching:
+    enabled: true
+    patterns:
+      - bed_availability
+      - ambulance_eta
+
+# Monitoring
+monitoring:
+  metrics:
+    - request_count
+    - request_latency
+    - agent_utilization
+    - conflict_rate
+    - deadlock_count
+    - cache_hit_rate
+  
+  alerts:
+    - name: high_latency
+      condition: "p95_latency > 1s"
+      severity: warning
+      
+    - name: agent_failure
+      condition: "error_rate > 5%"
+      severity: critical
+      
+    - name: deadlock_detected
+      condition: "deadlock_count > 0"
+      severity: critical

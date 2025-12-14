@@ -1,0 +1,339 @@
+# Trauma Coordinator Agent
+# Handles life-critical trauma cases with extreme caution
+
+version: "1.0"
+agent_id: trauma_coordinator
+type: critical
+category: emergency_medicine
+
+# Agent Metadata
+metadata:
+  name: "Trauma Coordination Agent"
+  description: "Assesses trauma severity and recommends routing to appropriate trauma centers"
+  version: "1.0.0"
+  status: active
+  
+# Capabilities
+capabilities:
+  primary:
+    - assess_trauma_severity
+    - recommend_trauma_center_routing
+    - coordinate_surgical_teams
+    - track_golden_hour_timeline
+    - suggest_prehospital_interventions
+  
+  supported_injury_types:
+    - penetrating_trauma
+    - blunt_force_trauma
+    - burns
+    - multiple_trauma
+    - head_injury
+    - spinal_injury
+    - crush_injury
+    
+  trauma_classifications:
+    - level_1_trauma_center   # Highest capability
+    - level_2_trauma_center
+    - level_3_trauma_center
+    - level_4_trauma_center
+
+# Hard Constraints (NEVER VIOLATE)
+hard_constraints:
+  - constraint: "NEVER make final routing decisions alone"
+    enforcement: mandatory
+    verification: require_paramedic_confirmation
+    
+  - constraint: "NEVER recommend treatment protocols"
+    enforcement: mandatory
+    violation_action: system_shutdown
+    
+  - constraint: "ALWAYS flag uncertainty if confidence < 90%"
+    enforcement: mandatory
+    fallback: route_to_highest_level_trauma_center
+    
+  - constraint: "MUST escalate immediately if conflicting information detected"
+    enforcement: mandatory
+    escalation_target: medical_control_physician
+    
+  - constraint: "CANNOT delay transport for AI processing"
+    enforcement: mandatory
+    max_processing_time: 30s
+    timeout_action: use_nearest_level_1_trauma_center
+
+# Input Schema
+input:
+  required_fields:
+    - incident_id
+    - patient_age
+    - patient_sex
+    - vital_signs:
+        - blood_pressure
+        - heart_rate
+        - respiratory_rate
+        - oxygen_saturation
+        - glasgow_coma_scale
+    - injury_description
+    - mechanism_of_injury
+    - paramedic_assessment
+    - current_location
+    - timestamp
+    
+  optional_fields:
+    - medical_history
+    - current_medications
+    - allergies
+    - patient_weight
+    - scene_safety_status
+    - estimated_blood_loss
+    - extrication_required
+    
+  validation:
+    vital_signs_ranges:
+      blood_pressure_systolic:
+        min: 40
+        max: 250
+        critical_low: 90
+      heart_rate:
+        min: 20
+        max: 220
+        critical_low: 50
+        critical_high: 150
+      respiratory_rate:
+        min: 0
+        max: 60
+        critical_low: 10
+        critical_high: 30
+      oxygen_saturation:
+        min: 0
+        max: 100
+        critical_low: 90
+      glasgow_coma_scale:
+        min: 3
+        max: 15
+        critical_low: 8
+
+# Decision Logic
+decision_logic:
+  # Step 1: Assess severity
+  severity_assessment:
+    algorithm: trauma_scoring
+    models:
+      - injury_severity_score
+      - revised_trauma_score
+      - trauma_mortality_prediction_model
+    
+    severity_levels:
+      critical:
+        criteria:
+          - gcs <= 8
+          - sbp < 90
+          - rr < 10 or > 29
+          - penetrating_injury_to_head_neck_torso
+          - amputation_proximal_to_wrist_ankle
+          - unstable_chest
+          - two_or_more_proximal_long_bone_fractures
+        recommended_level: level_1_trauma_center
+        
+      high:
+        criteria:
+          - gcs 9-12
+          - sbp 90-100
+          - suspected_internal_bleeding
+          - flail_chest
+          - crush_injury
+        recommended_level: level_1_or_2_trauma_center
+        
+      moderate:
+        criteria:
+          - gcs 13-15
+          - sbp > 100
+          - isolated_extremity_fracture
+          - minor_burns
+        recommended_level: level_2_or_3_trauma_center
+  
+  # Step 2: Consider special populations
+  special_populations:
+    pediatric:
+      age_threshold: 18
+      modifier: prefer_pediatric_trauma_center
+      
+    geriatric:
+      age_threshold: 65
+      modifier: upgrade_one_level
+      
+    pregnant:
+      modifier: require_maternal_fetal_medicine
+      
+    burns:
+      burn_area_threshold: 20%
+      modifier: require_burn_center
+  
+  # Step 3: Factor in time constraints
+  time_constraints:
+    golden_hour: 60m
+    platinum_ten: 10m_for_penetrating_trauma
+    
+    calculate_eta:
+      method: realtime_traffic_routing
+      fallback: straight_line_distance
+      
+    time_distance_tradeoff:
+      # Sometimes worth going to farther but higher-level center
+      max_additional_time: 15m
+      only_if_severity: critical
+  
+  # Step 4: Check facility capabilities
+  facility_matching:
+    required_capabilities:
+      level_1:
+        - immediate_surgery_24_7
+        - neurosurgery
+        - orthopedic_surgery
+        - trauma_team_activation
+        - ct_scanner
+        - blood_bank
+        - icu
+        
+      level_2:
+        - surgery_within_15min
+        - general_surgery
+        - orthopedics
+        - ct_scanner
+        - icu
+    
+    check_current_capacity:
+      trauma_bay_availability: required
+      or_availability: within_30min
+      icu_beds: at_least_one
+      
+    fallback_if_full:
+      strategy: next_nearest_equivalent_level
+      max_search_radius: 50_miles
+
+# Output Schema
+output:
+  recommendation:
+    facility_id: string
+    facility_name: string
+    facility_level: string
+    estimated_eta: duration
+    confidence_score: float
+    
+  reasoning:
+    severity_assessment: object
+    facility_selection_rationale: string
+    time_distance_analysis: object
+    alternatives_considered: array
+    
+  alerts:
+    golden_hour_status: enum[within, at_risk, exceeded]
+    special_considerations: array
+    resource_preactivation: array
+    
+  required_human_approval:
+    paramedic_confirmation: required
+    medical_control_physician: if_confidence_below_90%
+
+# Tool Access
+tools:
+  allowed:
+    - hospital_state.get_trauma_center_availability
+    - traffic_state.calculate_eta
+    - hospital_state.get_facility_capabilities
+    - alert_dispatcher.notify_trauma_team
+    - hospital_state.check_or_availability
+    
+  prohibited:
+    - patient_record.update        # Cannot modify medical records
+    - treatment.recommend           # Cannot recommend treatments
+    - medication.suggest            # Cannot suggest medications
+
+# Memory Access
+memory:
+  read:
+    - vector_stores.incidents        # Similar past cases
+    - vector_stores.protocols        # Trauma protocols
+    - graph_memory.resource_network  # Hospital relationships
+    
+  write:
+    - decision_logs.trauma_routing
+    - audit_logs.trauma_decisions
+    
+  retention:
+    decision_history: 7_years
+    anonymized_learning: indefinite
+
+# Monitoring
+monitoring:
+  metrics:
+    - decision_latency
+    - confidence_distribution
+    - override_rate
+    - outcome_accuracy
+    - time_to_definitive_care
+    
+  alerts:
+    - name: low_confidence_pattern
+      condition: "avg_confidence < 85% over 1h"
+      action: notify_medical_director
+      
+    - name: high_override_rate
+      condition: "override_rate > 20% over 24h"
+      action: trigger_model_review
+      
+    - name: delayed_decisions
+      condition: "decision_latency > 20s"
+      action: investigate_bottleneck
+
+# Performance Targets
+sla:
+  decision_time:
+    target: 10s
+    maximum: 30s
+    
+  accuracy:
+    target: 95%
+    minimum: 90%
+    measurement: paramedic_agreement_rate
+    
+  availability:
+    target: 99.99%
+    
+  confidence:
+    target_average: 92%
+    minimum_acceptable: 80%
+
+# Fallback Behavior
+fallback:
+  on_low_confidence:
+    action: recommend_highest_level_facility
+    notify: medical_control
+    
+  on_missing_data:
+    action: assume_worst_case_scenario
+    routing: level_1_trauma_center
+    
+  on_system_error:
+    action: defer_to_paramedic_judgment
+    provide: list_of_nearby_trauma_centers
+    
+  on_timeout:
+    action: return_nearest_level_1_facility
+    log: timeout_incident
+
+# Ethical Guidelines
+ethics:
+  fairness:
+    - no_discrimination_by_demographics
+    - equal_access_regardless_of_insurance
+    - prioritize_based_on_medical_need_only
+    
+  transparency:
+    - explain_all_recommendations
+    - disclose_confidence_levels
+    - document_alternatives_considered
+    
+  accountability:
+    - log_all_decisions
+    - enable_audit_trail
+    - support_outcome_tracking
