@@ -1,0 +1,29 @@
+{"level":"info","message":"Initializing HealthGuard MCP Server...","service":"mcp-server","timestamp":"2025-12-14T10:57:38.079Z"}
+{"level":"info","message":"Configuration loaded successfully","service":"mcp-server","timestamp":"2025-12-14T10:57:38.108Z"}
+{"level":"info","message":"Initializing circuit breakers...","service":"mcp-server","timestamp":"2025-12-14T10:57:38.117Z"}
+{"level":"info","message":"Circuit breakers initialized","service":"mcp-server","timestamp":"2025-12-14T10:57:38.117Z"}
+{"level":"info","message":"Circuit breakers initialized","service":"mcp-server","timestamp":"2025-12-14T10:57:38.117Z"}
+{"level":"info","message":"Initializing rate limiters...","service":"mcp-server","timestamp":"2025-12-14T10:57:38.117Z"}
+{"level":"info","message":"Rate limiters initialized","service":"mcp-server","timestamp":"2025-12-14T10:57:38.118Z"}
+{"level":"info","message":"Rate limiters initialized","service":"mcp-server","timestamp":"2025-12-14T10:57:38.118Z"}
+{"level":"info","message":"Loading policies...","service":"mcp-server","timestamp":"2025-12-14T10:57:38.118Z"}
+{"level":"info","message":"Loaded 1 policy files","service":"mcp-server","timestamp":"2025-12-14T10:57:38.119Z"}
+{"level":"info","message":"Policies loaded","service":"mcp-server","timestamp":"2025-12-14T10:57:38.119Z"}
+{"level":"info","message":"Loading agents...","service":"mcp-server","timestamp":"2025-12-14T10:57:38.120Z"}
+{"level":"info","message":"Registered 2 agents","service":"mcp-server","timestamp":"2025-12-14T10:57:38.121Z"}
+{"level":"info","message":"Loaded 2 agents","service":"mcp-server","timestamp":"2025-12-14T10:57:38.121Z"}
+{"level":"info","message":"Loading tools...","service":"mcp-server","timestamp":"2025-12-14T10:57:38.121Z"}
+{"level":"info","message":"Loaded 3 tools","service":"mcp-server","timestamp":"2025-12-14T10:57:38.121Z"}
+{"level":"info","message":"Loaded 3 tools","service":"mcp-server","timestamp":"2025-12-14T10:57:38.122Z"}
+{"level":"info","message":"Initializing memory systems...","service":"mcp-server","timestamp":"2025-12-14T10:57:38.122Z"}
+{"level":"info","message":"Memory systems initialized","service":"mcp-server","timestamp":"2025-12-14T10:57:38.122Z"}
+{"level":"info","message":"Memory systems initialized","service":"mcp-server","timestamp":"2025-12-14T10:57:38.122Z"}
+{"level":"info","message":"Orchestrator starting...","service":"mcp-server","timestamp":"2025-12-14T10:57:38.122Z"}
+{"level":"info","message":"Orchestrator started successfully","service":"mcp-server","timestamp":"2025-12-14T10:57:38.123Z"}
+{"level":"info","message":"Orchestrator started","service":"mcp-server","timestamp":"2025-12-14T10:57:38.123Z"}
+{"level":"info","message":"MCP Server initialized successfully","service":"mcp-server","timestamp":"2025-12-14T10:57:38.124Z"}
+{"level":"info","message":"🏥 HealthGuard MCP Server running on port 3000","service":"mcp-server","timestamp":"2025-12-14T10:57:38.126Z"}
+{"level":"info","message":"📊 Health check: http://localhost:3000/health","service":"mcp-server","timestamp":"2025-12-14T10:57:38.127Z"}
+{"level":"info","message":"🤖 Agents: 2","service":"mcp-server","timestamp":"2025-12-14T10:57:38.127Z"}
+{"level":"info","message":"🛠️  Tools: 3","service":"mcp-server","timestamp":"2025-12-14T10:57:38.127Z"}
+{"level":"info","message":"Shutting down MCP Server...","service":"mcp-server","timestamp":"2025-12-14T10:58:13.871Z"}

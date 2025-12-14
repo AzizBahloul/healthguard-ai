@@ -21,8 +21,9 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # Startup
     logger.info("🚀 Starting HealthGuard Backend API...")
-    await init_db()
-    logger.info("✅ Database initialized")
+    # Skip database init for local testing without PostgreSQL
+    # await init_db()
+    logger.info("✅ HealthGuard Backend API started (DB init skipped for local dev)")
     yield
     # Shutdown
     logger.info("👋 Shutting down HealthGuard Backend API...")
