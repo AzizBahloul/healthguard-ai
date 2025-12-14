@@ -21,3 +21,7 @@ rad.json
 #Test results file
 TestResults.xml
 .env
+venv/
+mcp-server/node_modules
+venv
+frontend/node_modules

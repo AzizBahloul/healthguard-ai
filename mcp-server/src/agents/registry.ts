@@ -27,7 +27,7 @@ export class AgentRegistry {
         const agentPath = path.join(process.cwd(), 'agents', dir);
         try {
           const files = await fs.readdir(agentPath);
-          totalAgents += files.filter(f => f.endsWith('.agent.yaml')).length;
+          totalAgents += files.filter((f: string) => f.endsWith('.agent.yaml')).length;
         } catch (error) {
           // Directory might not exist yet
         }
