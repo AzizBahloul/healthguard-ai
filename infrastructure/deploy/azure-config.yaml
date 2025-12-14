@@ -1,0 +1,420 @@
+# Azure Deployment Configuration
+# Deploy to Azure Container Apps, AKS, or VMs
+
+version: '1.0'
+
+# ============================================================================
+# Azure Container Apps - Recommended for serverless containers
+# ============================================================================
+azure_container_apps:
+  resource_group: healthguard-production
+  location: eastus
+  environment_name: healthguard-env
+  
+  apps:
+    backend:
+      image: healthguard.azurecr.io/backend:latest
+      cpu: 2.0
+      memory: 4Gi
+      min_replicas: 2
+      max_replicas: 10
+      port: 8000
+      ingress:
+        external: true
+        target_port: 8000
+        transport: http
+        allow_insecure: false
+      health_probes:
+        liveness:
+          path: /health
+          port: 8000
+          initial_delay: 10
+          period: 30
+        readiness:
+          path: /health
+          port: 8000
+      scaling:
+        rules:
+          - name: http-scaling
+            http:
+              concurrent_requests: 100
+          - name: cpu-scaling
+            custom:
+              type: cpu
+              metadata:
+                type: Utilization
+                value: "70"
+      environment_variables:
+        - name: DEPLOYMENT_PLATFORM
+          value: azure
+        - name: ENVIRONMENT
+          value: production
+        - name: AZURE_ENABLED
+          value: "true"
+        - name: AZURE_POSTGRES_ENABLED
+          value: "true"
+        - name: AZURE_REDIS_ENABLED
+          value: "true"
+      secrets:
+        - name: database-password
+          key_vault_url: https://healthguard-kv.vault.azure.net/secrets/db-password
+        - name: jwt-secret
+          key_vault_url: https://healthguard-kv.vault.azure.net/secrets/jwt-secret
+    
+    mcp_server:
+      image: healthguard.azurecr.io/mcp:latest
+      cpu: 4.0
+      memory: 8Gi
+      min_replicas: 2
+      max_replicas: 8
+      port: 3000
+      ingress:
+        external: false
+        target_port: 3000
+      scaling:
+        rules:
+          - name: cpu-scaling
+            custom:
+              type: cpu
+              metadata:
+                value: "70"
+      environment_variables:
+        - name: DEPLOYMENT_PLATFORM
+          value: azure
+        - name: LLM_MODE
+          value: hybrid
+        - name: AZURE_OPENAI_ENABLED
+          value: "true"
+    
+    frontend:
+      image: healthguard.azurecr.io/frontend:latest
+      cpu: 1.0
+      memory: 2Gi
+      min_replicas: 2
+      max_replicas: 5
+      port: 5173
+      ingress:
+        external: true
+        target_port: 5173
+        custom_domains:
+          - name: healthguard.example.com
+            certificate_id: /subscriptions/.../certificates/healthguard-cert
+
+  # Container Registry
+  container_registry:
+    name: healthguard
+    sku: Premium
+    admin_enabled: false
+    geo_replication:
+      - location: westus
+      - location: eastus2
+    retention_policy:
+      days: 30
+      enabled: true
+
+# ============================================================================
+# Azure Kubernetes Service (AKS)
+# ============================================================================
+azure_aks:
+  resource_group: healthguard-k8s
+  cluster_name: healthguard-cluster
+  location: eastus
+  kubernetes_version: "1.28"
+  
+  node_pools:
+    - name: system
+      vm_size: Standard_D4s_v3
+      node_count: 3
+      min_count: 2
+      max_count: 5
+      mode: System
+      os_disk_size_gb: 100
+      
+    - name: backend
+      vm_size: Standard_D8s_v3
+      node_count: 3
+      min_count: 2
+      max_count: 10
+      mode: User
+      os_disk_size_gb: 128
+      node_labels:
+        workload: backend
+      
+    - name: gpu
+      vm_size: Standard_NC6s_v3  # For local LLM
+      node_count: 2
+      min_count: 1
+      max_count: 4
+      mode: User
+      os_disk_size_gb: 256
+      node_labels:
+        workload: ml-inference
+      node_taints:
+        - nvidia.com/gpu=true:NoSchedule
+  
+  network:
+    network_plugin: azure
+    network_policy: azure
+    service_cidr: 10.0.0.0/16
+    dns_service_ip: 10.0.0.10
+    docker_bridge_cidr: 172.17.0.1/16
+  
+  addons:
+    monitoring:
+      enabled: true
+      log_analytics_workspace_id: /subscriptions/.../workspaces/healthguard-logs
+    
+    azure_policy:
+      enabled: true
+    
+    ingress_application_gateway:
+      enabled: true
+      gateway_id: /subscriptions/.../applicationGateways/healthguard-agw
+
+# ============================================================================
+# Azure Database for PostgreSQL
+# ============================================================================
+azure_postgres:
+  server_name: healthguard-db
+  resource_group: healthguard-production
+  location: eastus
+  version: "15"
+  
+  sku:
+    name: GP_Gen5_8  # General Purpose, 8 vCores
+    tier: GeneralPurpose
+    capacity: 8
+    family: Gen5
+  
+  storage:
+    size_gb: 512
+    auto_grow: enabled
+    backup_retention_days: 35
+    geo_redundant_backup: enabled
+  
+  high_availability:
+    mode: ZoneRedundant
+    standby_availability_zone: "2"
+  
+  security:
+    ssl_enforcement: enabled
+    minimal_tls_version: TLS1_2
+    public_network_access: disabled
+    
+  firewall_rules:
+    - name: azure-services
+      start_ip: 0.0.0.0
+      end_ip: 0.0.0.0
+  
+  databases:
+    - name: healthguard
+      charset: UTF8
+      collation: en_US.utf8
+
+# ============================================================================
+# Azure Cache for Redis
+# ============================================================================
+azure_redis:
+  name: healthguard-cache
+  resource_group: healthguard-production
+  location: eastus
+  
+  sku:
+    name: Premium
+    family: P
+    capacity: 2  # 6GB cache
+  
+  redis_configuration:
+    maxmemory_policy: allkeys-lru
+    maxmemory_reserved: 615
+    maxfragmentationmemory_reserved: 615
+  
+  enable_non_ssl_port: false
+  minimum_tls_version: "1.2"
+  
+  zones:
+    - "1"
+    - "2"
+  
+  replication:
+    enabled: true
+    
+  persistence:
+    enabled: true
+    backup_frequency: 60  # minutes
+    backup_max_count: 1
+
+# ============================================================================
+# Azure Storage
+# ============================================================================
+azure_storage:
+  account_name: healthguardstorage
+  resource_group: healthguard-production
+  location: eastus
+  
+  account:
+    tier: Standard
+    replication: GRS  # Geo-redundant
+    kind: StorageV2
+    access_tier: Hot
+    https_only: true
+    minimum_tls_version: TLS1_2
+    
+  blob_service:
+    versioning: true
+    change_feed: true
+    delete_retention_days: 30
+    container_delete_retention_days: 30
+    
+  containers:
+    - name: patient-data
+      access: private
+      lifecycle_policy:
+        rules:
+          - name: archive-old-data
+            enabled: true
+            filters:
+              blob_types: blockBlob
+            actions:
+              base_blob:
+                tier_to_cool:
+                  days_after_modification: 90
+                tier_to_archive:
+                  days_after_modification: 365
+
+# ============================================================================
+# Azure Key Vault
+# ============================================================================
+azure_key_vault:
+  name: healthguard-kv
+  resource_group: healthguard-production
+  location: eastus
+  
+  sku: premium
+  enabled_for_deployment: true
+  enabled_for_disk_encryption: true
+  enabled_for_template_deployment: true
+  
+  network_acls:
+    default_action: Deny
+    bypass: AzureServices
+    virtual_network_rules:
+      - subnet_id: /subscriptions/.../subnets/backend
+  
+  secrets:
+    - name: database-password
+      value: ${DATABASE_PASSWORD}
+    - name: jwt-secret
+      value: ${JWT_SECRET}
+    - name: encryption-key
+      value: ${ENCRYPTION_KEY}
+    - name: openai-api-key
+      value: ${OPENAI_API_KEY}
+
+# ============================================================================
+# Azure Monitor & Application Insights
+# ============================================================================
+azure_monitor:
+  log_analytics:
+    name: healthguard-logs
+    resource_group: healthguard-production
+    location: eastus
+    sku: PerGB2018
+    retention_days: 90
+    
+  application_insights:
+    name: healthguard-insights
+    resource_group: healthguard-production
+    location: eastus
+    application_type: web
+    
+    alerts:
+      - name: high-response-time
+        metric: requests/duration
+        threshold: 1000  # ms
+        operator: GreaterThan
+        
+      - name: high-error-rate
+        metric: requests/failed
+        threshold: 5  # percent
+        operator: GreaterThan
+        
+      - name: low-availability
+        metric: availabilityResults/availabilityPercentage
+        threshold: 99
+        operator: LessThan
+
+# ============================================================================
+# Azure Service Bus (Message Queue)
+# ============================================================================
+azure_service_bus:
+  namespace: healthguard-events
+  resource_group: healthguard-production
+  location: eastus
+  sku: Premium
+  capacity: 1
+  
+  topics:
+    - name: emergency-events
+      max_size: 5120  # MB
+      requires_duplicate_detection: true
+      
+    - name: hospital-updates
+      max_size: 5120
+      
+  queues:
+    - name: critical-alerts
+      max_size: 5120
+      requires_duplicate_detection: true
+      dead_lettering: true
+
+# ============================================================================
+# Deployment Commands
+# ============================================================================
+deployment_commands:
+  container_apps:
+    build: |
+      # Build Docker images
+      docker build -t healthguard-backend:latest ./backend
+      docker build -t healthguard-mcp:latest ./mcp-server
+      docker build -t healthguard-frontend:latest ./frontend
+      
+      # Login to Azure Container Registry
+      az acr login --name healthguard
+      
+      # Tag and push
+      docker tag healthguard-backend:latest healthguard.azurecr.io/backend:latest
+      docker tag healthguard-mcp:latest healthguard.azurecr.io/mcp:latest
+      docker tag healthguard-frontend:latest healthguard.azurecr.io/frontend:latest
+      
+      docker push healthguard.azurecr.io/backend:latest
+      docker push healthguard.azurecr.io/mcp:latest
+      docker push healthguard.azurecr.io/frontend:latest
+    
+    deploy: |
+      # Deploy Container Apps
+      az containerapp update \\
+        --name healthguard-backend \\
+        --resource-group healthguard-production \\
+        --image healthguard.azurecr.io/backend:latest
+      
+      az containerapp update \\
+        --name healthguard-mcp \\
+        --resource-group healthguard-production \\
+        --image healthguard.azurecr.io/mcp:latest
+  
+  aks:
+    deploy: |
+      # Get AKS credentials
+      az aks get-credentials --resource-group healthguard-k8s --name healthguard-cluster
+      
+      # Deploy to Kubernetes
+      kubectl apply -f infrastructure/kubernetes/base/
+      kubectl apply -f infrastructure/kubernetes/overlays/production/
+  
+  terraform:
+    deploy: |
+      cd infrastructure/terraform/environments/production
+      terraform init
+      terraform plan -out=tfplan
+      terraform apply tfplan

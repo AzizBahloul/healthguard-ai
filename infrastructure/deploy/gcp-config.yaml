@@ -1,0 +1,784 @@
+# HealthGuard AI - Google Cloud Platform (GCP) Deployment Configuration
+# Production-Ready Configuration for Cloud Run, GKE, Cloud SQL, Memorystore
+# Supports: Auto-scaling, High Availability, Disaster Recovery, LLM Integration
+
+project:
+  name: healthguard-ai
+  id: ${GCP_PROJECT_ID}
+  region: us-central1
+  zones:
+    - us-central1-a
+    - us-central1-b
+    - us-central1-c
+
+# =============================================================================
+# Cloud Run - Fully Managed Serverless Containers (Fastest Deployment)
+# =============================================================================
+cloud_run:
+  services:
+    backend:
+      name: healthguard-backend
+      image: gcr.io/${GCP_PROJECT_ID}/healthguard-backend:latest
+      
+      resources:
+        limits:
+          cpu: "2"
+          memory: 4Gi
+        requests:
+          cpu: "1"
+          memory: 2Gi
+      
+      scaling:
+        min_instances: 2
+        max_instances: 100
+        concurrency: 80
+        cpu_throttling: false
+      
+      environment:
+        - name: DEPLOYMENT_PLATFORM
+          value: gcp
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: database-url
+              key: url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: redis-url
+              key: url
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: jwt-secret
+              key: secret
+      
+      networking:
+        ingress: all  # Allow public traffic
+        vpc_connector: healthguard-vpc-connector
+        egress: private-ranges-only
+      
+      service_account: healthguard-backend@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+      
+      health_check:
+        path: /health
+        initial_delay: 10
+        period: 10
+        timeout: 5
+        failure_threshold: 3
+    
+    mcp_server:
+      name: healthguard-mcp
+      image: gcr.io/${GCP_PROJECT_ID}/healthguard-mcp:latest
+      
+      resources:
+        limits:
+          cpu: "4"
+          memory: 8Gi
+        requests:
+          cpu: "2"
+          memory: 4Gi
+      
+      scaling:
+        min_instances: 2
+        max_instances: 50
+        concurrency: 50
+      
+      environment:
+        - name: DEPLOYMENT_PLATFORM
+          value: gcp
+        - name: LLM_MODE
+          value: ${LLM_MODE}
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: openai-api-key
+              key: key
+      
+      networking:
+        ingress: internal  # Only accessible from within VPC
+        vpc_connector: healthguard-vpc-connector
+      
+      service_account: healthguard-mcp@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+    
+    frontend:
+      name: healthguard-frontend
+      image: gcr.io/${GCP_PROJECT_ID}/healthguard-frontend:latest
+      
+      resources:
+        limits:
+          cpu: "1"
+          memory: 2Gi
+        requests:
+          cpu: "0.5"
+          memory: 1Gi
+      
+      scaling:
+        min_instances: 2
+        max_instances: 100
+        concurrency: 100
+      
+      networking:
+        ingress: all
+        cdn_enabled: true
+      
+      service_account: healthguard-frontend@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+
+# =============================================================================
+# GKE - Google Kubernetes Engine (For Local LLM with GPU Support)
+# =============================================================================
+gke:
+  cluster:
+    name: healthguard-production
+    location: us-central1
+    release_channel: REGULAR
+    network: healthguard-vpc
+    subnetwork: healthguard-subnet
+    
+    # High availability configuration
+    regional: true
+    availability_zones:
+      - us-central1-a
+      - us-central1-b
+      - us-central1-c
+    
+    master_authorized_networks:
+      - display_name: Office
+        cidr_block: 0.0.0.0/0  # Replace with actual IP ranges
+    
+    # Security
+    workload_identity_enabled: true
+    binary_authorization_enabled: true
+    network_policy_enabled: true
+    pod_security_policy_enabled: true
+    
+    # Monitoring
+    logging_service: logging.googleapis.com/kubernetes
+    monitoring_service: monitoring.googleapis.com/kubernetes
+    
+    # Maintenance window
+    maintenance_window:
+      start_time: "2024-01-01T03:00:00Z"
+      duration: 4h
+      recurrence: FREQ=WEEKLY;BYDAY=SU
+  
+  node_pools:
+    # General purpose nodes
+    - name: general-pool
+      initial_node_count: 3
+      min_node_count: 3
+      max_node_count: 20
+      
+      machine_type: n2-standard-4
+      disk_size_gb: 100
+      disk_type: pd-ssd
+      
+      autoscaling:
+        enabled: true
+        min_nodes: 3
+        max_nodes: 20
+      
+      management:
+        auto_upgrade: true
+        auto_repair: true
+      
+      node_config:
+        preemptible: false
+        oauth_scopes:
+          - https://www.googleapis.com/auth/cloud-platform
+        labels:
+          workload: general
+        taints: []
+    
+    # GPU nodes for local LLM inference
+    - name: gpu-pool
+      initial_node_count: 1
+      min_node_count: 0
+      max_node_count: 5
+      
+      machine_type: n1-standard-8
+      accelerator:
+        type: nvidia-tesla-t4
+        count: 1
+      
+      disk_size_gb: 200
+      disk_type: pd-ssd
+      
+      autoscaling:
+        enabled: true
+        min_nodes: 0
+        max_nodes: 5
+      
+      node_config:
+        preemptible: false  # Don't use preemptible for critical workloads
+        oauth_scopes:
+          - https://www.googleapis.com/auth/cloud-platform
+        labels:
+          workload: llm-inference
+          accelerator: nvidia-tesla-t4
+        taints:
+          - key: nvidia.com/gpu
+            value: "true"
+            effect: NoSchedule
+
+# =============================================================================
+# Cloud SQL - Managed PostgreSQL Database
+# =============================================================================
+cloud_sql:
+  instance:
+    name: healthguard-db-production
+    database_version: POSTGRES_15
+    region: us-central1
+    
+    tier: db-custom-8-32768  # 8 vCPUs, 32GB RAM
+    
+    # High Availability
+    availability_type: REGIONAL  # Multi-zone
+    
+    # Backups
+    backup_configuration:
+      enabled: true
+      start_time: "03:00"
+      point_in_time_recovery_enabled: true
+      transaction_log_retention_days: 7
+      backup_retention_days: 30
+      location: us
+    
+    # Security
+    require_ssl: true
+    encryption:
+      kms_key_name: projects/${GCP_PROJECT_ID}/locations/us-central1/keyRings/healthguard/cryptoKeys/db-key
+    
+    # Maintenance
+    maintenance_window:
+      day: 7  # Sunday
+      hour: 3
+      update_track: stable
+    
+    # Performance
+    insights_config:
+      query_insights_enabled: true
+      query_plans_per_minute: 5
+      query_string_length: 1024
+      record_application_tags: true
+    
+    # Flags
+    database_flags:
+      - name: max_connections
+        value: "500"
+      - name: shared_buffers
+        value: "8192MB"
+      - name: effective_cache_size
+        value: "24GB"
+      - name: maintenance_work_mem
+        value: "2GB"
+      - name: checkpoint_completion_target
+        value: "0.9"
+      - name: wal_buffers
+        value: "16MB"
+      - name: default_statistics_target
+        value: "100"
+      - name: random_page_cost
+        value: "1.1"
+      - name: effective_io_concurrency
+        value: "200"
+      - name: work_mem
+        value: "32MB"
+      - name: min_wal_size
+        value: "2GB"
+      - name: max_wal_size
+        value: "8GB"
+    
+    # Network
+    ip_configuration:
+      ipv4_enabled: false
+      private_network: projects/${GCP_PROJECT_ID}/global/networks/healthguard-vpc
+      require_ssl: true
+  
+  databases:
+    - name: healthguard
+      charset: UTF8
+      collation: en_US.UTF8
+  
+  users:
+    - name: healthguard_app
+      password: ${DATABASE_PASSWORD}  # From Secret Manager
+
+# =============================================================================
+# Memorystore - Managed Redis Cache
+# =============================================================================
+memorystore:
+  redis:
+    instance_id: healthguard-cache-production
+    tier: STANDARD_HA  # High availability with automatic failover
+    memory_size_gb: 10
+    region: us-central1
+    
+    redis_version: REDIS_6_X
+    
+    # Network
+    authorized_network: healthguard-vpc
+    connect_mode: PRIVATE_SERVICE_ACCESS
+    
+    # Configuration
+    redis_configs:
+      maxmemory-policy: allkeys-lru
+      notify-keyspace-events: Ex
+      timeout: "300"
+    
+    # Maintenance
+    maintenance_policy:
+      weekly_maintenance_window:
+        day: SUNDAY
+        start_time:
+          hours: 3
+          minutes: 0
+    
+    # Performance
+    read_replicas_mode: READ_REPLICAS_ENABLED
+    replica_count: 2
+    
+    # Transit encryption
+    transit_encryption_mode: SERVER_AUTHENTICATION
+
+# =============================================================================
+# Cloud Storage - Object Storage for Static Assets & Backups
+# =============================================================================
+cloud_storage:
+  buckets:
+    # Static assets
+    - name: ${GCP_PROJECT_ID}-static-assets
+      location: US
+      storage_class: STANDARD
+      
+      versioning:
+        enabled: true
+      
+      lifecycle_rules:
+        - action:
+            type: Delete
+          condition:
+            age: 90
+            is_live: false
+      
+      cors:
+        - origin: ["https://healthguard.example.com"]
+          method: ["GET", "HEAD"]
+          response_header: ["Content-Type"]
+          max_age_seconds: 3600
+      
+      uniform_bucket_level_access: true
+    
+    # Database backups (HIPAA 7-year retention)
+    - name: ${GCP_PROJECT_ID}-db-backups
+      location: US
+      storage_class: NEARLINE
+      
+      versioning:
+        enabled: true
+      
+      lifecycle_rules:
+        - action:
+            type: SetStorageClass
+            storage_class: COLDLINE
+          condition:
+            age: 365
+        - action:
+            type: SetStorageClass
+            storage_class: ARCHIVE
+          condition:
+            age: 730
+        - action:
+            type: Delete
+          condition:
+            age: 2555  # 7 years
+      
+      retention_policy:
+        retention_period: 220838400  # 7 years in seconds
+        is_locked: true
+      
+      encryption:
+        default_kms_key_name: projects/${GCP_PROJECT_ID}/locations/us/keyRings/healthguard/cryptoKeys/storage-key
+
+# =============================================================================
+# Secret Manager - Secure Secret Storage
+# =============================================================================
+secret_manager:
+  secrets:
+    - name: database-url
+      replication:
+        automatic: true
+      
+    - name: redis-url
+      replication:
+        automatic: true
+    
+    - name: jwt-secret
+      replication:
+        automatic: true
+    
+    - name: encryption-key
+      replication:
+        automatic: true
+    
+    - name: openai-api-key
+      replication:
+        automatic: true
+    
+    - name: anthropic-api-key
+      replication:
+        automatic: true
+
+# =============================================================================
+# Cloud Logging & Monitoring
+# =============================================================================
+logging:
+  log_sinks:
+    - name: healthguard-all-logs
+      destination: logging.googleapis.com/projects/${GCP_PROJECT_ID}/locations/us-central1/buckets/healthguard-logs
+      filter: resource.type="cloud_run_revision"
+      
+    - name: healthguard-error-logs
+      destination: logging.googleapis.com/projects/${GCP_PROJECT_ID}/locations/us-central1/buckets/healthguard-errors
+      filter: 'severity>=ERROR'
+      
+    - name: healthguard-audit-logs
+      destination: logging.googleapis.com/projects/${GCP_PROJECT_ID}/locations/us-central1/buckets/healthguard-audit
+      filter: 'protoPayload.serviceName="cloudaudit.googleapis.com"'
+  
+  log_buckets:
+    - name: healthguard-logs
+      location: us-central1
+      retention_days: 30
+      
+    - name: healthguard-errors
+      location: us-central1
+      retention_days: 90
+      
+    - name: healthguard-audit
+      location: us-central1
+      retention_days: 2555  # 7 years (HIPAA)
+
+monitoring:
+  alert_policies:
+    # High error rate
+    - display_name: High Error Rate
+      conditions:
+        - display_name: Error rate > 5%
+          condition_threshold:
+            filter: |
+              resource.type="cloud_run_revision"
+              AND metric.type="run.googleapis.com/request_count"
+              AND metric.labels.response_code_class="5xx"
+            aggregations:
+              - alignment_period: 60s
+                per_series_aligner: ALIGN_RATE
+            comparison: COMPARISON_GT
+            threshold_value: 0.05
+            duration: 300s
+      
+      notification_channels:
+        - projects/${GCP_PROJECT_ID}/notificationChannels/${PAGERDUTY_CHANNEL_ID}
+      
+      alert_strategy:
+        auto_close: 1800s
+    
+    # High latency
+    - display_name: High Response Latency
+      conditions:
+        - display_name: P95 latency > 1s
+          condition_threshold:
+            filter: |
+              resource.type="cloud_run_revision"
+              AND metric.type="run.googleapis.com/request_latencies"
+            aggregations:
+              - alignment_period: 60s
+                per_series_aligner: ALIGN_DELTA
+                cross_series_reducer: REDUCE_PERCENTILE_95
+            comparison: COMPARISON_GT
+            threshold_value: 1000
+            duration: 300s
+      
+      notification_channels:
+        - projects/${GCP_PROJECT_ID}/notificationChannels/${SLACK_CHANNEL_ID}
+    
+    # Database connection pool exhaustion
+    - display_name: Database Connection Pool Full
+      conditions:
+        - display_name: Active connections > 450
+          condition_threshold:
+            filter: |
+              resource.type="cloudsql_database"
+              AND metric.type="cloudsql.googleapis.com/database/postgresql/num_backends"
+            aggregations:
+              - alignment_period: 60s
+                per_series_aligner: ALIGN_MEAN
+            comparison: COMPARISON_GT
+            threshold_value: 450
+            duration: 180s
+      
+      notification_channels:
+        - projects/${GCP_PROJECT_ID}/notificationChannels/${PAGERDUTY_CHANNEL_ID}
+    
+    # Memory usage
+    - display_name: High Memory Usage
+      conditions:
+        - display_name: Memory > 90%
+          condition_threshold:
+            filter: |
+              resource.type="cloud_run_revision"
+              AND metric.type="run.googleapis.com/container/memory/utilizations"
+            aggregations:
+              - alignment_period: 60s
+                per_series_aligner: ALIGN_MEAN
+            comparison: COMPARISON_GT
+            threshold_value: 0.9
+            duration: 300s
+      
+      notification_channels:
+        - projects/${GCP_PROJECT_ID}/notificationChannels/${SLACK_CHANNEL_ID}
+
+# =============================================================================
+# Cloud Pub/Sub - Message Queue for Event Streaming
+# =============================================================================
+pubsub:
+  topics:
+    - name: healthguard-critical-events
+      message_retention_duration: 604800s  # 7 days
+      
+    - name: healthguard-operational-events
+      message_retention_duration: 86400s  # 1 day
+      
+    - name: healthguard-audit-events
+      message_retention_duration: 2592000s  # 30 days
+  
+  subscriptions:
+    - name: analytics-consumer
+      topic: healthguard-operational-events
+      ack_deadline_seconds: 60
+      message_retention_duration: 604800s
+      retry_policy:
+        minimum_backoff: 10s
+        maximum_backoff: 600s
+      
+      dead_letter_policy:
+        dead_letter_topic: healthguard-dead-letter
+        max_delivery_attempts: 5
+
+# =============================================================================
+# VPC & Networking
+# =============================================================================
+networking:
+  vpc:
+    name: healthguard-vpc
+    auto_create_subnetworks: false
+    
+    subnets:
+      - name: healthguard-subnet
+        region: us-central1
+        ip_cidr_range: 10.0.0.0/20
+        
+        secondary_ip_ranges:
+          - range_name: gke-pods
+            ip_cidr_range: 10.4.0.0/14
+          - range_name: gke-services
+            ip_cidr_range: 10.8.0.0/20
+  
+  vpc_connector:
+    name: healthguard-vpc-connector
+    region: us-central1
+    network: healthguard-vpc
+    ip_cidr_range: 10.9.0.0/28
+    min_instances: 2
+    max_instances: 10
+    machine_type: e2-micro
+  
+  cloud_nat:
+    name: healthguard-nat
+    region: us-central1
+    router: healthguard-router
+    nat_ip_allocate_option: AUTO_ONLY
+    source_subnetwork_ip_ranges_to_nat: ALL_SUBNETWORKS_ALL_IP_RANGES
+  
+  firewall_rules:
+    # Allow health checks
+    - name: allow-health-checks
+      direction: INGRESS
+      priority: 1000
+      source_ranges:
+        - 35.191.0.0/16
+        - 130.211.0.0/22
+      allowed:
+        - protocol: tcp
+          ports: ["8000", "3000"]
+    
+    # Deny all other ingress by default
+    - name: deny-all-ingress
+      direction: INGRESS
+      priority: 65534
+      source_ranges:
+        - 0.0.0.0/0
+      denied:
+        - protocol: all
+
+# =============================================================================
+# IAM & Security
+# =============================================================================
+iam:
+  service_accounts:
+    - account_id: healthguard-backend
+      display_name: HealthGuard Backend Service Account
+      roles:
+        - roles/cloudsql.client
+        - roles/secretmanager.secretAccessor
+        - roles/logging.logWriter
+        - roles/monitoring.metricWriter
+        - roles/pubsub.publisher
+    
+    - account_id: healthguard-mcp
+      display_name: HealthGuard MCP Service Account
+      roles:
+        - roles/aiplatform.user  # For Vertex AI (optional)
+        - roles/secretmanager.secretAccessor
+        - roles/logging.logWriter
+        - roles/pubsub.subscriber
+    
+    - account_id: healthguard-frontend
+      display_name: HealthGuard Frontend Service Account
+      roles:
+        - roles/storage.objectViewer
+        - roles/logging.logWriter
+
+# =============================================================================
+# Deployment Commands
+# =============================================================================
+deployment_commands:
+  # Build and push Docker images
+  build_and_push:
+    - gcloud auth configure-docker
+    - |
+      docker build -t gcr.io/${GCP_PROJECT_ID}/healthguard-backend:latest \\
+        -f backend/Dockerfile backend/
+    - |
+      docker build -t gcr.io/${GCP_PROJECT_ID}/healthguard-mcp:latest \\
+        -f mcp-server/Dockerfile mcp-server/
+    - |
+      docker build -t gcr.io/${GCP_PROJECT_ID}/healthguard-frontend:latest \\
+        -f frontend/Dockerfile frontend/
+    - docker push gcr.io/${GCP_PROJECT_ID}/healthguard-backend:latest
+    - docker push gcr.io/${GCP_PROJECT_ID}/healthguard-mcp:latest
+    - docker push gcr.io/${GCP_PROJECT_ID}/healthguard-frontend:latest
+  
+  # Deploy to Cloud Run
+  deploy_cloud_run:
+    - |
+      gcloud run deploy healthguard-backend \\
+        --image gcr.io/${GCP_PROJECT_ID}/healthguard-backend:latest \\
+        --platform managed \\
+        --region us-central1 \\
+        --min-instances 2 \\
+        --max-instances 100 \\
+        --cpu 2 \\
+        --memory 4Gi \\
+        --concurrency 80 \\
+        --vpc-connector healthguard-vpc-connector \\
+        --vpc-egress private-ranges-only \\
+        --service-account healthguard-backend@${GCP_PROJECT_ID}.iam.gserviceaccount.com \\
+        --set-env-vars DEPLOYMENT_PLATFORM=gcp \\
+        --set-secrets DATABASE_URL=database-url:latest,JWT_SECRET=jwt-secret:latest \\
+        --allow-unauthenticated
+    - |
+      gcloud run deploy healthguard-mcp \\
+        --image gcr.io/${GCP_PROJECT_ID}/healthguard-mcp:latest \\
+        --platform managed \\
+        --region us-central1 \\
+        --min-instances 2 \\
+        --max-instances 50 \\
+        --cpu 4 \\
+        --memory 8Gi \\
+        --vpc-connector healthguard-vpc-connector \\
+        --service-account healthguard-mcp@${GCP_PROJECT_ID}.iam.gserviceaccount.com \\
+        --set-env-vars DEPLOYMENT_PLATFORM=gcp,LLM_MODE=${LLM_MODE} \\
+        --set-secrets OPENAI_API_KEY=openai-api-key:latest \\
+        --no-allow-unauthenticated
+    - |
+      gcloud run deploy healthguard-frontend \\
+        --image gcr.io/${GCP_PROJECT_ID}/healthguard-frontend:latest \\
+        --platform managed \\
+        --region us-central1 \\
+        --min-instances 2 \\
+        --max-instances 100 \\
+        --cpu 1 \\
+        --memory 2Gi \\
+        --service-account healthguard-frontend@${GCP_PROJECT_ID}.iam.gserviceaccount.com \\
+        --allow-unauthenticated
+  
+  # Deploy to GKE (for local LLM with GPU)
+  deploy_gke:
+    - gcloud container clusters get-credentials healthguard-production --region us-central1
+    - kubectl apply -f infrastructure/kubernetes/base/
+    - kubectl apply -f infrastructure/kubernetes/overlays/production/
+    - kubectl rollout status deployment/healthguard-backend
+    - kubectl rollout status deployment/healthguard-mcp
+    - kubectl rollout status deployment/healthguard-frontend
+  
+  # Terraform deployment (recommended)
+  deploy_terraform:
+    - cd infrastructure/terraform/gcp
+    - terraform init
+    - terraform plan -out=tfplan
+    - terraform apply tfplan
+    - terraform output -json > deployment_info.json
+
+# =============================================================================
+# Backup & Disaster Recovery
+# =============================================================================
+disaster_recovery:
+  # Automated backups
+  backups:
+    database:
+      frequency: daily
+      retention: 30_days
+      point_in_time_recovery: true
+    
+    config:
+      frequency: on_change
+      retention: 90_days
+  
+  # Multi-region failover
+  failover:
+    secondary_region: us-east1
+    rpo: 1_hour  # Recovery Point Objective
+    rto: 15_minutes  # Recovery Time Objective
+    
+    cross_region_replication:
+      - source: us-central1
+        destination: us-east1
+        async: true
+
+# =============================================================================
+# Cost Optimization
+# =============================================================================
+cost_optimization:
+  # Use committed use discounts
+  committed_use:
+    compute: 1_year
+    savings: ~30%
+  
+  # Use preemptible VMs for non-critical workloads
+  preemptible_nodes:
+    batch_processing: true
+    ml_training: true
+  
+  # Auto-scaling to zero for dev environments
+  dev_auto_scale_to_zero: true
+  
+  # Budget alerts
+  budgets:
+    - name: healthguard-monthly
+      amount: 10000
+      threshold_rules:
+        - threshold_percent: 0.5
+        - threshold_percent: 0.75
+        - threshold_percent: 0.9
+        - threshold_percent: 1.0

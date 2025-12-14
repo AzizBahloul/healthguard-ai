@@ -1,0 +1,354 @@
+# AWS Deployment Configuration
+# Deploy to AWS ECS, EKS, or EC2
+
+version: '1.0'
+
+# ============================================================================
+# AWS ECS (Elastic Container Service) - Recommended for ease of use
+# ============================================================================
+aws_ecs:
+  cluster_name: healthguard-production
+  region: us-east-1
+  
+  services:
+    backend:
+      image: healthguard-backend:latest
+      cpu: 1024
+      memory: 2048
+      desired_count: 3
+      max_count: 10
+      min_count: 2
+      port: 8000
+      health_check:
+        path: /health
+        interval: 30
+        timeout: 5
+        healthy_threshold: 2
+        unhealthy_threshold: 3
+      auto_scaling:
+        enabled: true
+        target_cpu: 70
+        target_memory: 80
+      environment:
+        - DEPLOYMENT_PLATFORM=aws
+        - ENVIRONMENT=production
+        - AWS_ENABLED=true
+        - AWS_CLOUDWATCH_ENABLED=true
+        - AWS_RDS_ENABLED=true
+    
+    mcp_server:
+      image: healthguard-mcp:latest
+      cpu: 2048
+      memory: 4096
+      desired_count: 3
+      max_count: 10
+      min_count: 2
+      port: 3000
+      health_check:
+        path: /health
+        interval: 30
+      auto_scaling:
+        enabled: true
+        target_cpu: 70
+      environment:
+        - DEPLOYMENT_PLATFORM=aws
+        - LLM_MODE=hybrid
+        - AWS_ENABLED=true
+    
+    frontend:
+      image: healthguard-frontend:latest
+      cpu: 512
+      memory: 1024
+      desired_count: 2
+      max_count: 5
+      min_count: 2
+      port: 5173
+      environment:
+        - DEPLOYMENT_PLATFORM=aws
+        - ENVIRONMENT=production
+
+  load_balancer:
+    type: application
+    name: healthguard-alb
+    scheme: internet-facing
+    subnets:
+      - subnet-xxxxx  # Replace with your subnets
+      - subnet-yyyyy
+    security_groups:
+      - sg-xxxxx  # Replace with your security group
+    
+    listeners:
+      - port: 443
+        protocol: HTTPS
+        certificate_arn: arn:aws:acm:region:account:certificate/xxx
+        default_action:
+          type: forward
+          target_group: healthguard-frontend
+      
+      - port: 80
+        protocol: HTTP
+        default_action:
+          type: redirect
+          redirect:
+            protocol: HTTPS
+            port: 443
+            status_code: HTTP_301
+
+  networking:
+    vpc_id: vpc-xxxxx  # Replace with your VPC
+    subnets:
+      - subnet-xxxxx
+      - subnet-yyyyy
+    security_groups:
+      backend:
+        ingress:
+          - port: 8000
+            cidr: 10.0.0.0/16
+          - port: 443
+            cidr: 0.0.0.0/0
+      mcp:
+        ingress:
+          - port: 3000
+            cidr: 10.0.0.0/16
+      frontend:
+        ingress:
+          - port: 5173
+            cidr: 10.0.0.0/16
+
+  # RDS PostgreSQL
+  rds:
+    engine: postgres
+    engine_version: "15.4"
+    instance_class: db.r6g.xlarge
+    allocated_storage: 100
+    storage_type: gp3
+    iops: 3000
+    multi_az: true
+    backup_retention: 30
+    backup_window: "03:00-04:00"
+    maintenance_window: "Mon:04:00-Mon:05:00"
+    encryption: true
+    monitoring_interval: 60
+    performance_insights: true
+    deletion_protection: true
+    database_name: healthguard
+    master_username: healthguard_admin
+
+  # ElastiCache Redis
+  elasticache:
+    engine: redis
+    engine_version: "7.0"
+    node_type: cache.r6g.large
+    num_cache_nodes: 3
+    automatic_failover: true
+    multi_az: true
+    at_rest_encryption: true
+    transit_encryption: true
+    snapshot_retention_limit: 7
+    snapshot_window: "05:00-06:00"
+    maintenance_window: "sun:06:00-sun:07:00"
+
+  # S3 Storage
+  s3:
+    buckets:
+      - name: healthguard-storage
+        versioning: true
+        encryption: AES256
+        lifecycle_rules:
+          - id: archive-old-data
+            enabled: true
+            transitions:
+              - days: 90
+                storage_class: STANDARD_IA
+              - days: 365
+                storage_class: GLACIER
+          - id: delete-old-logs
+            enabled: true
+            expiration:
+              days: 2555  # 7 years for HIPAA compliance
+
+  # CloudWatch Monitoring
+  cloudwatch:
+    log_groups:
+      - name: /aws/ecs/healthguard-backend
+        retention_days: 30
+      - name: /aws/ecs/healthguard-mcp
+        retention_days: 30
+      - name: /aws/ecs/healthguard-frontend
+        retention_days: 7
+    
+    alarms:
+      - name: high-cpu-backend
+        metric: CPUUtilization
+        threshold: 80
+        evaluation_periods: 2
+        comparison_operator: GreaterThanThreshold
+        actions:
+          - sns:arn:aws:sns:region:account:healthguard-alerts
+      
+      - name: high-memory-backend
+        metric: MemoryUtilization
+        threshold: 85
+        evaluation_periods: 2
+      
+      - name: database-connections
+        metric: DatabaseConnections
+        threshold: 80
+        evaluation_periods: 1
+
+  # Secrets Manager
+  secrets_manager:
+    secrets:
+      - name: healthguard/production/database
+        description: Database credentials
+        rotation: true
+        rotation_days: 30
+      
+      - name: healthguard/production/jwt
+        description: JWT secrets
+      
+      - name: healthguard/production/api-keys
+        description: LLM API keys
+
+  # Auto Scaling
+  auto_scaling:
+    target_tracking:
+      - metric: CPUUtilization
+        target_value: 70
+      - metric: MemoryUtilization
+        target_value: 80
+    
+    step_scaling:
+      - metric: RequestCountPerTarget
+        adjustments:
+          - lower_bound: 0
+            upper_bound: 100
+            scaling_adjustment: 1
+          - lower_bound: 100
+            scaling_adjustment: 2
+
+# ============================================================================
+# AWS EKS (Elastic Kubernetes Service) - For Kubernetes users
+# ============================================================================
+aws_eks:
+  cluster_name: healthguard-k8s
+  version: "1.28"
+  region: us-east-1
+  
+  node_groups:
+    - name: backend-nodes
+      instance_types:
+        - m5.xlarge
+        - m5.2xlarge
+      scaling:
+        desired: 3
+        min: 2
+        max: 10
+      disk_size: 100
+      labels:
+        workload: backend
+    
+    - name: gpu-nodes
+      instance_types:
+        - g4dn.xlarge  # For local LLM inference
+      scaling:
+        desired: 2
+        min: 1
+        max: 5
+      disk_size: 200
+      labels:
+        workload: ml-inference
+      taints:
+        - key: nvidia.com/gpu
+          value: "true"
+          effect: NoSchedule
+
+  addons:
+    - name: vpc-cni
+      version: latest
+    - name: coredns
+      version: latest
+    - name: kube-proxy
+      version: latest
+    - name: aws-ebs-csi-driver
+      version: latest
+
+  # See infrastructure/kubernetes/ for manifests
+
+# ============================================================================
+# AWS EC2 (Direct VMs) - For custom control
+# ============================================================================
+aws_ec2:
+  instances:
+    - name: healthguard-backend
+      instance_type: m5.2xlarge
+      ami: ami-xxxxx  # Ubuntu 22.04 LTS
+      count: 3
+      root_volume:
+        size: 100
+        type: gp3
+        iops: 3000
+      
+    - name: healthguard-mcp
+      instance_type: m5.4xlarge  # Larger for LLM
+      ami: ami-xxxxx
+      count: 2
+      root_volume:
+        size: 200
+        type: gp3
+      
+    - name: healthguard-gpu
+      instance_type: g4dn.2xlarge  # For local LLM
+      ami: ami-xxxxx  # Deep Learning AMI
+      count: 2
+      root_volume:
+        size: 500
+        type: gp3
+
+  load_balancer:
+    type: application
+    scheme: internet-facing
+
+# ============================================================================
+# Deployment Commands
+# ============================================================================
+deployment_commands:
+  ecs:
+    build: |
+      # Build and push Docker images
+      docker build -t healthguard-backend:latest ./backend
+      docker build -t healthguard-mcp:latest ./mcp-server
+      docker build -t healthguard-frontend:latest ./frontend
+      
+      # Tag for ECR
+      docker tag healthguard-backend:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/healthguard-backend:latest
+      docker tag healthguard-mcp:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/healthguard-mcp:latest
+      docker tag healthguard-frontend:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/healthguard-frontend:latest
+      
+      # Push to ECR
+      aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+      docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/healthguard-backend:latest
+      docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/healthguard-mcp:latest
+      docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/healthguard-frontend:latest
+    
+    deploy: |
+      # Deploy using AWS CLI
+      aws ecs update-service --cluster healthguard-production --service healthguard-backend --force-new-deployment
+      aws ecs update-service --cluster healthguard-production --service healthguard-mcp --force-new-deployment
+      aws ecs update-service --cluster healthguard-production --service healthguard-frontend --force-new-deployment
+    
+    terraform: |
+      cd infrastructure/terraform/environments/production
+      terraform init
+      terraform plan -out=tfplan
+      terraform apply tfplan
+
+  eks:
+    deploy: |
+      # Deploy to Kubernetes
+      kubectl apply -f infrastructure/kubernetes/base/
+      kubectl apply -f infrastructure/kubernetes/overlays/production/
+    
+    scale: |
+      kubectl scale deployment healthguard-backend --replicas=5
+      kubectl scale deployment healthguard-mcp --replicas=3

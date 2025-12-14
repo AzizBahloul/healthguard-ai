@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: healthguard-config
+data:
+  llm-mode: "api"  # local, api, or hybrid
+  ollama-host: "http://ollama-service:11434"
+  log-level: "info"
+  cors-origins: "https://healthguard.example.com"

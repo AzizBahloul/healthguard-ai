@@ -1,0 +1,160 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: healthguard-mcp
+  labels:
+    app: healthguard
+    component: mcp
+    tier: ai
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: healthguard
+      component: mcp
+  template:
+    metadata:
+      labels:
+        app: healthguard
+        component: mcp
+        tier: ai
+    spec:
+      serviceAccountName: healthguard-mcp
+      
+      containers:
+      - name: mcp-server
+        image: healthguard-mcp:latest
+        imagePullPolicy: Always
+        
+        ports:
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        
+        env:
+        - name: DEPLOYMENT_PLATFORM
+          value: "kubernetes"
+        - name: NODE_ENV
+          value: "production"
+        - name: LLM_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: healthguard-config
+              key: llm-mode
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: healthguard-secrets
+              key: openai-api-key
+              optional: true
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: healthguard-secrets
+              key: anthropic-api-key
+              optional: true
+        - name: OLLAMA_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: healthguard-config
+              key: ollama-host
+              optional: true
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: healthguard-secrets
+              key: redis-password
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: healthguard-secrets
+              key: jwt-secret
+        
+        resources:
+          requests:
+            cpu: "2"
+            memory: "4Gi"
+          limits:
+            cpu: "4"
+            memory: "8Gi"
+        
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 10
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 2
+        
+        volumeMounts:
+        - name: agents
+          mountPath: /app/agents
+          readOnly: true
+        - name: policies
+          mountPath: /app/policies
+          readOnly: true
+        - name: logs
+          mountPath: /app/logs
+      
+      volumes:
+      - name: agents
+        configMap:
+          name: mcp-agents
+      - name: policies
+        configMap:
+          name: mcp-policies
+      - name: logs
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: healthguard-mcp
+  labels:
+    app: healthguard
+    component: mcp
+spec:
+  type: ClusterIP
+  selector:
+    app: healthguard
+    component: mcp
+  ports:
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+    name: http
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: healthguard-mcp-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: healthguard-mcp
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

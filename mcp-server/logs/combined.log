@@ -27,3 +27,147 @@
 {"level":"info","message":"🤖 Agents: 2","service":"mcp-server","timestamp":"2025-12-14T10:57:38.127Z"}
 {"level":"info","message":"🛠️  Tools: 3","service":"mcp-server","timestamp":"2025-12-14T10:57:38.127Z"}
 {"level":"info","message":"Shutting down MCP Server...","service":"mcp-server","timestamp":"2025-12-14T10:58:13.871Z"}
+{"level":"info","message":"Initializing circuit breakers...","service":"mcp-server","timestamp":"2025-12-14T11:10:40.954Z"}
+{"level":"info","message":"Circuit breakers initialized","service":"mcp-server","timestamp":"2025-12-14T11:10:40.958Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: test-agent","service":"mcp-server","timestamp":"2025-12-14T11:10:40.963Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: agent-1","service":"mcp-server","timestamp":"2025-12-14T11:10:40.964Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: unhealthy-agent","service":"mcp-server","timestamp":"2025-12-14T11:10:40.967Z"}
+{"level":"info","message":"Initializing circuit breakers...","service":"mcp-server","timestamp":"2025-12-14T11:10:40.968Z"}
+{"level":"info","message":"Circuit breakers initialized","service":"mcp-server","timestamp":"2025-12-14T11:10:40.969Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: agent-2","service":"mcp-server","timestamp":"2025-12-14T11:10:40.969Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:10:40.971Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:10:40.971Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:10:40.972Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:10:40.972Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:10:40.972Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:10:40.973Z"}
+{"level":"info","message":"Initializing circuit breakers...","service":"mcp-server","timestamp":"2025-12-14T11:11:05.204Z"}
+{"level":"info","message":"Circuit breakers initialized","service":"mcp-server","timestamp":"2025-12-14T11:11:05.208Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: test-agent","service":"mcp-server","timestamp":"2025-12-14T11:11:05.212Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: agent-1","service":"mcp-server","timestamp":"2025-12-14T11:11:05.213Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: unhealthy-agent","service":"mcp-server","timestamp":"2025-12-14T11:11:05.220Z"}
+{"level":"info","message":"Initializing circuit breakers...","service":"mcp-server","timestamp":"2025-12-14T11:11:05.222Z"}
+{"level":"info","message":"Circuit breakers initialized","service":"mcp-server","timestamp":"2025-12-14T11:11:05.223Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: agent-2","service":"mcp-server","timestamp":"2025-12-14T11:11:05.223Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:11:05.225Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:11:05.226Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:11:05.226Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:11:05.227Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:11:05.227Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:11:05.227Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: failing_agent","service":"mcp-server","timestamp":"2025-12-14T11:11:05.550Z"}
+{"level":"warn","message":"Circuit breaker open for agent: failing_agent","service":"mcp-server","timestamp":"2025-12-14T11:11:05.552Z"}
+{"level":"info","message":"Orchestrator starting...","service":"mcp-server","timestamp":"2025-12-14T11:11:05.558Z"}
+{"level":"info","message":"Orchestrator started successfully","service":"mcp-server","timestamp":"2025-12-14T11:11:05.558Z"}
+{"level":"info","message":"Orchestrator starting...","service":"mcp-server","timestamp":"2025-12-14T11:11:05.559Z"}
+{"level":"info","message":"Orchestrator started successfully","service":"mcp-server","timestamp":"2025-12-14T11:11:05.560Z"}
+{"level":"info","message":"Orchestrator stopping...","service":"mcp-server","timestamp":"2025-12-14T11:11:05.560Z"}
+{"level":"info","message":"Orchestrator stopped","service":"mcp-server","timestamp":"2025-12-14T11:11:05.560Z"}
+{"level":"info","message":"Orchestrator starting...","service":"mcp-server","timestamp":"2025-12-14T11:11:05.561Z"}
+{"level":"info","message":"Orchestrator started successfully","service":"mcp-server","timestamp":"2025-12-14T11:11:05.561Z"}
+{"level":"info","message":"Orchestrator stopping...","service":"mcp-server","timestamp":"2025-12-14T11:11:05.562Z"}
+{"level":"info","message":"Orchestrator stopped","service":"mcp-server","timestamp":"2025-12-14T11:11:05.562Z"}
+{"level":"info","message":"Initializing circuit breakers...","service":"mcp-server","timestamp":"2025-12-14T11:12:19.756Z"}
+{"level":"info","message":"Circuit breakers initialized","service":"mcp-server","timestamp":"2025-12-14T11:12:19.760Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: test-agent","service":"mcp-server","timestamp":"2025-12-14T11:12:19.765Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: agent-1","service":"mcp-server","timestamp":"2025-12-14T11:12:19.766Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: unhealthy-agent","service":"mcp-server","timestamp":"2025-12-14T11:12:19.769Z"}
+{"level":"info","message":"Initializing circuit breakers...","service":"mcp-server","timestamp":"2025-12-14T11:12:19.770Z"}
+{"level":"info","message":"Circuit breakers initialized","service":"mcp-server","timestamp":"2025-12-14T11:12:19.770Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: agent-2","service":"mcp-server","timestamp":"2025-12-14T11:12:19.771Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:12:19.772Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:12:19.773Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:12:19.773Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:12:19.773Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:12:19.774Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:12:19.774Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: failing_agent","service":"mcp-server","timestamp":"2025-12-14T11:12:19.769Z"}
+{"level":"warn","message":"Circuit breaker open for agent: failing_agent","service":"mcp-server","timestamp":"2025-12-14T11:12:19.771Z"}
+{"level":"info","message":"Orchestrator starting...","service":"mcp-server","timestamp":"2025-12-14T11:12:19.777Z"}
+{"level":"info","message":"Orchestrator started successfully","service":"mcp-server","timestamp":"2025-12-14T11:12:19.777Z"}
+{"level":"info","message":"Orchestrator starting...","service":"mcp-server","timestamp":"2025-12-14T11:12:19.778Z"}
+{"level":"info","message":"Orchestrator started successfully","service":"mcp-server","timestamp":"2025-12-14T11:12:19.779Z"}
+{"level":"info","message":"Orchestrator stopping...","service":"mcp-server","timestamp":"2025-12-14T11:12:19.779Z"}
+{"level":"info","message":"Orchestrator stopped","service":"mcp-server","timestamp":"2025-12-14T11:12:19.779Z"}
+{"level":"info","message":"Orchestrator starting...","service":"mcp-server","timestamp":"2025-12-14T11:12:19.781Z"}
+{"level":"info","message":"Orchestrator started successfully","service":"mcp-server","timestamp":"2025-12-14T11:12:19.781Z"}
+{"level":"info","message":"Orchestrator stopping...","service":"mcp-server","timestamp":"2025-12-14T11:12:19.782Z"}
+{"level":"info","message":"Orchestrator stopped","service":"mcp-server","timestamp":"2025-12-14T11:12:19.782Z"}
+{"level":"info","message":"Initializing circuit breakers...","service":"mcp-server","timestamp":"2025-12-14T11:12:40.218Z"}
+{"level":"info","message":"Circuit breakers initialized","service":"mcp-server","timestamp":"2025-12-14T11:12:40.222Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: test-agent","service":"mcp-server","timestamp":"2025-12-14T11:12:40.226Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: agent-1","service":"mcp-server","timestamp":"2025-12-14T11:12:40.227Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: unhealthy-agent","service":"mcp-server","timestamp":"2025-12-14T11:12:40.230Z"}
+{"level":"info","message":"Initializing circuit breakers...","service":"mcp-server","timestamp":"2025-12-14T11:12:40.231Z"}
+{"level":"info","message":"Circuit breakers initialized","service":"mcp-server","timestamp":"2025-12-14T11:12:40.231Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: agent-2","service":"mcp-server","timestamp":"2025-12-14T11:12:40.231Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:12:40.233Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:12:40.233Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:12:40.233Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:12:40.234Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:12:40.234Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:12:40.234Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: failing_agent","service":"mcp-server","timestamp":"2025-12-14T11:12:40.265Z"}
+{"level":"warn","message":"Circuit breaker open for agent: failing_agent","service":"mcp-server","timestamp":"2025-12-14T11:12:40.267Z"}
+{"level":"info","message":"Orchestrator starting...","service":"mcp-server","timestamp":"2025-12-14T11:12:40.278Z"}
+{"level":"info","message":"Orchestrator started successfully","service":"mcp-server","timestamp":"2025-12-14T11:12:40.278Z"}
+{"level":"info","message":"Orchestrator starting...","service":"mcp-server","timestamp":"2025-12-14T11:12:40.279Z"}
+{"level":"info","message":"Orchestrator started successfully","service":"mcp-server","timestamp":"2025-12-14T11:12:40.280Z"}
+{"level":"info","message":"Orchestrator stopping...","service":"mcp-server","timestamp":"2025-12-14T11:12:40.280Z"}
+{"level":"info","message":"Orchestrator stopped","service":"mcp-server","timestamp":"2025-12-14T11:12:40.280Z"}
+{"level":"info","message":"Orchestrator starting...","service":"mcp-server","timestamp":"2025-12-14T11:12:40.281Z"}
+{"level":"info","message":"Orchestrator started successfully","service":"mcp-server","timestamp":"2025-12-14T11:12:40.281Z"}
+{"level":"info","message":"Orchestrator stopping...","service":"mcp-server","timestamp":"2025-12-14T11:12:40.282Z"}
+{"level":"info","message":"Orchestrator stopped","service":"mcp-server","timestamp":"2025-12-14T11:12:40.282Z"}
+{"level":"info","message":"Initializing circuit breakers...","service":"mcp-server","timestamp":"2025-12-14T11:13:38.225Z"}
+{"level":"info","message":"Circuit breakers initialized","service":"mcp-server","timestamp":"2025-12-14T11:13:38.229Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: test-agent","service":"mcp-server","timestamp":"2025-12-14T11:13:38.233Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: agent-1","service":"mcp-server","timestamp":"2025-12-14T11:13:38.234Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: unhealthy-agent","service":"mcp-server","timestamp":"2025-12-14T11:13:38.236Z"}
+{"level":"info","message":"Initializing circuit breakers...","service":"mcp-server","timestamp":"2025-12-14T11:13:38.237Z"}
+{"level":"info","message":"Circuit breakers initialized","service":"mcp-server","timestamp":"2025-12-14T11:13:38.238Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: agent-2","service":"mcp-server","timestamp":"2025-12-14T11:13:38.238Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:13:38.239Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:13:38.240Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:13:38.240Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:13:38.240Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:13:38.240Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:13:38.241Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: failing_agent","service":"mcp-server","timestamp":"2025-12-14T11:13:38.247Z"}
+{"level":"warn","message":"Circuit breaker open for agent: failing_agent","service":"mcp-server","timestamp":"2025-12-14T11:13:38.249Z"}
+{"level":"info","message":"Orchestrator starting...","service":"mcp-server","timestamp":"2025-12-14T11:13:38.256Z"}
+{"level":"info","message":"Orchestrator started successfully","service":"mcp-server","timestamp":"2025-12-14T11:13:38.256Z"}
+{"level":"info","message":"Orchestrator starting...","service":"mcp-server","timestamp":"2025-12-14T11:13:38.257Z"}
+{"level":"info","message":"Orchestrator started successfully","service":"mcp-server","timestamp":"2025-12-14T11:13:38.258Z"}
+{"level":"info","message":"Orchestrator stopping...","service":"mcp-server","timestamp":"2025-12-14T11:13:38.258Z"}
+{"level":"info","message":"Orchestrator stopped","service":"mcp-server","timestamp":"2025-12-14T11:13:38.258Z"}
+{"level":"info","message":"Orchestrator starting...","service":"mcp-server","timestamp":"2025-12-14T11:13:38.259Z"}
+{"level":"info","message":"Orchestrator started successfully","service":"mcp-server","timestamp":"2025-12-14T11:13:38.259Z"}
+{"level":"info","message":"Orchestrator stopping...","service":"mcp-server","timestamp":"2025-12-14T11:13:38.259Z"}
+{"level":"info","message":"Orchestrator stopped","service":"mcp-server","timestamp":"2025-12-14T11:13:38.260Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: failing_agent","service":"mcp-server","timestamp":"2025-12-14T11:14:10.616Z"}
+{"level":"warn","message":"Circuit breaker open for agent: failing_agent","service":"mcp-server","timestamp":"2025-12-14T11:14:10.618Z"}
+{"level":"info","message":"Orchestrator starting...","service":"mcp-server","timestamp":"2025-12-14T11:14:10.623Z"}
+{"level":"info","message":"Orchestrator started successfully","service":"mcp-server","timestamp":"2025-12-14T11:14:10.623Z"}
+{"level":"info","message":"Orchestrator starting...","service":"mcp-server","timestamp":"2025-12-14T11:14:10.624Z"}
+{"level":"info","message":"Orchestrator started successfully","service":"mcp-server","timestamp":"2025-12-14T11:14:10.624Z"}
+{"level":"info","message":"Orchestrator stopping...","service":"mcp-server","timestamp":"2025-12-14T11:14:10.624Z"}
+{"level":"info","message":"Orchestrator stopped","service":"mcp-server","timestamp":"2025-12-14T11:14:10.625Z"}
+{"level":"info","message":"Orchestrator starting...","service":"mcp-server","timestamp":"2025-12-14T11:14:10.625Z"}
+{"level":"info","message":"Orchestrator started successfully","service":"mcp-server","timestamp":"2025-12-14T11:14:10.626Z"}
+{"level":"info","message":"Orchestrator stopping...","service":"mcp-server","timestamp":"2025-12-14T11:14:10.626Z"}
+{"level":"info","message":"Orchestrator stopped","service":"mcp-server","timestamp":"2025-12-14T11:14:10.626Z"}
+{"level":"info","message":"Initializing circuit breakers...","service":"mcp-server","timestamp":"2025-12-14T11:14:10.626Z"}
+{"level":"info","message":"Circuit breakers initialized","service":"mcp-server","timestamp":"2025-12-14T11:14:10.629Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: test-agent","service":"mcp-server","timestamp":"2025-12-14T11:14:10.634Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: agent-1","service":"mcp-server","timestamp":"2025-12-14T11:14:10.635Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: unhealthy-agent","service":"mcp-server","timestamp":"2025-12-14T11:14:10.637Z"}
+{"level":"info","message":"Initializing circuit breakers...","service":"mcp-server","timestamp":"2025-12-14T11:14:10.638Z"}
+{"level":"info","message":"Circuit breakers initialized","service":"mcp-server","timestamp":"2025-12-14T11:14:10.638Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: agent-2","service":"mcp-server","timestamp":"2025-12-14T11:14:10.639Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:14:10.644Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:14:10.645Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:14:10.646Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:14:10.646Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:14:10.646Z"}
+{"level":"warn","message":"Circuit breaker opened for agent: rapid-fail","service":"mcp-server","timestamp":"2025-12-14T11:14:10.646Z"}
